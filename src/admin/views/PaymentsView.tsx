@@ -13,7 +13,8 @@ import {
   Plus, 
   ShieldCheck, 
   Loader2, 
-  Copy
+  Copy,
+  QrCode
 } from 'lucide-react';
 import type { AdminBooking } from '../types/admin.types';
 import { 
@@ -24,6 +25,7 @@ import {
   useSetPrimaryQRCode, 
   useDeleteQRCode 
 } from '../../hooks/useQR';
+import type { QRCodeData } from '../../api/qr.api';
 import { useUpdateBookingStatus } from '../../hooks/useBookings';
 import { compressImage } from '../../utils/imageCompression';
 
@@ -31,7 +33,7 @@ interface PaymentsViewProps {
   bookings: AdminBooking[];
 }
 
-// Branded Payment Method Logos matching the reference image exactly
+// Branded Payment Method Logos
 export const PaymentBrandLogos = {
   PhonePe: () => (
     <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#5f259f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: 800, fontSize: '15px', flexShrink: 0, boxShadow: '0 2px 4px rgba(95, 37, 159, 0.2)' }}>
@@ -65,116 +67,15 @@ export const PaymentBrandLogos = {
   )
 };
 
-// Default fallback preset QR cards matching image if backend is empty
-const INITIAL_PRESET_QRS = [
-  {
-    id: 'preset-phonepe',
-    title: 'Meet By Vibe UPI',
-    upiId: 'meetbyvibe@ybl',
-    bankName: 'PhonePe',
-    imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=meetbyvibe@ybl&pn=MeetByVibe%20UPI&cu=INR',
-    isActive: true,
-    isPrimary: true
-  },
-  {
-    id: 'preset-gpay',
-    title: 'Meet By Vibe GPay',
-    upiId: 'meetbyvibe@okaxis',
-    bankName: 'Google Pay',
-    imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=meetbyvibe@okaxis&pn=MeetByVibe%20GPay&cu=INR',
-    isActive: false,
-    isPrimary: false
-  },
-  {
-    id: 'preset-paytm',
-    title: 'Meet By Vibe Paytm',
-    upiId: 'meetbyvibe@paytm',
-    bankName: 'Paytm',
-    imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=meetbyvibe@paytm&pn=MeetByVibe%20Paytm&cu=INR',
-    isActive: true,
-    isPrimary: false
-  },
-  {
-    id: 'preset-bharatpe',
-    title: 'Meet By Vibe BharatPe',
-    upiId: 'meetbyvibe@bharatpe',
-    bankName: 'BharatPe',
-    imageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=meetbyvibe@bharatpe&pn=MeetByVibe%20BharatPe&cu=INR',
-    isActive: true,
-    isPrimary: false
-  }
-];
-
-// Default sample transactions matching image if bookings is empty
-const SAMPLE_TRANSACTIONS = [
-  {
-    id: 'tx-1',
-    userName: 'Rohit Sharma',
-    userInitial: 'R',
-    utrNumber: '123456789012',
-    amount: '500.00',
-    paymentMethod: 'PhonePe',
-    qrCodeName: 'Meet By Vibe UPI',
-    status: 'Verified' as const,
-    transactionDate: '05 Oct 2026, 12:30 PM',
-    screenshotUrl: null
-  },
-  {
-    id: 'tx-2',
-    userName: 'Pooja Singh',
-    userInitial: 'P',
-    utrNumber: '987654321098',
-    amount: '1,200.00',
-    paymentMethod: 'Google Pay',
-    qrCodeName: 'Meet By Vibe GPay',
-    status: 'Pending' as const,
-    transactionDate: '05 Oct 2026, 11:15 AM',
-    screenshotUrl: null
-  },
-  {
-    id: 'tx-3',
-    userName: 'Amit Kumar',
-    userInitial: 'A',
-    utrNumber: '564738291056',
-    amount: '300.00',
-    paymentMethod: 'Paytm',
-    qrCodeName: 'Meet By Vibe Paytm',
-    status: 'Verified' as const,
-    transactionDate: '05 Oct 2026, 10:45 AM',
-    screenshotUrl: null
-  },
-  {
-    id: 'tx-4',
-    userName: 'Sneha Patel',
-    userInitial: 'S',
-    utrNumber: '192837465091',
-    amount: '750.00',
-    paymentMethod: 'BharatPe',
-    qrCodeName: 'Meet By Vibe BharatPe',
-    status: 'Rejected' as const,
-    transactionDate: '05 Oct 2026, 09:20 AM',
-    screenshotUrl: null
-  }
-];
-
 export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
-  // Query & Mutations for QR Code Management
+  // TanStack Query Hooks for Real-Time Backend Connectivity
   const { data: activeQR } = useActiveQRCode();
-  const { data: dbQRCodes = [] } = useAllQRCodes();
+  const { data: qrCodes = [], isLoading: isLoadingQRs } = useAllQRCodes();
   const createQRMutation = useCreateQRCode();
   const updateQRMutation = useUpdateQRCode();
   const setPrimaryMutation = useSetPrimaryQRCode();
   const deleteQRMutation = useDeleteQRCode();
   const updateBookingStatusMutation = useUpdateBookingStatus();
-
-  // Combine DB QR codes with fallback preset QRs so user always sees the 4 cards
-  const [localQRs, setLocalQRs] = useState(INITIAL_PRESET_QRS);
-
-  useEffect(() => {
-    if (dbQRCodes && dbQRCodes.length > 0) {
-      setLocalQRs(dbQRCodes as any);
-    }
-  }, [dbQRCodes]);
 
   // Top Section: Upload Form State
   const [paymentMethod, setPaymentMethod] = useState<'UPI (PhonePe)' | 'UPI (Google Pay)' | 'UPI (Paytm)' | 'UPI (BharatPe)' | 'Other Bank UPI'>('UPI (PhonePe)');
@@ -196,8 +97,8 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Verified' | 'Pending' | 'Rejected'>('ALL');
 
   // Modals State
-  const [viewingQR, setViewingQR] = useState<any | null>(null);
-  const [editingQR, setEditingQR] = useState<any | null>(null);
+  const [viewingQR, setViewingQR] = useState<QRCodeData | null>(null);
+  const [editingQR, setEditingQR] = useState<QRCodeData | null>(null);
   const [viewingTransaction, setViewingTransaction] = useState<any | null>(null);
   const [copiedUpi, setCopiedUpi] = useState(false);
 
@@ -247,7 +148,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setFormError('Please select a valid image file (PNG, JPG, JPEG).');
+      setFormError('Please select a valid image file (PNG, JPG, JPEG, WEBP).');
       return;
     }
 
@@ -272,7 +173,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
     }
   };
 
-  // Upload QR Code to Backend
+  // Upload QR Code directly to Backend via TanStack Query Mutation
   const handleUploadQRCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName.trim()) {
@@ -284,6 +185,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
       return;
     }
 
+    // If no custom file chosen, auto-generate standard high-res UPI QR payload
     const fallbackQrData = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(`upi://pay?pa=${upiId.trim()}&pn=${encodeURIComponent(displayName.trim())}&cu=INR`)}`;
     const finalImageUrl = qrPreviewUrl || fallbackQrData;
 
@@ -299,21 +201,10 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
         bankName: bankBrand,
         isActive: isActive,
         isPrimary: isActive,
+        description: `Created for ${displayName.trim()}`
       });
 
-      // Update local state immediately as well
-      const newCard = {
-        id: `qr-${Date.now()}`,
-        title: displayName.trim(),
-        upiId: upiId.trim(),
-        bankName: bankBrand,
-        imageUrl: finalImageUrl,
-        isActive: isActive,
-        isPrimary: isActive
-      };
-      setLocalQRs((prev) => [newCard, ...prev]);
-
-      setFormSuccess(`QR Code "${displayName}" uploaded successfully and activated for client payments!`);
+      setFormSuccess(`QR Code "${displayName}" uploaded successfully to backend and activated for client payments!`);
       setTimeout(() => setFormSuccess(null), 5000);
 
       // Reset form
@@ -321,13 +212,13 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
       setCompressedSizeKB(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err.message || 'Failed to upload QR code.';
+      const msg = err?.message || 'Failed to upload QR code to backend.';
       setFormError(msg);
     }
   };
 
   // Helper to render method logo by bankName string
-  const renderMethodIcon = (methodName?: string) => {
+  const renderMethodIcon = (methodName?: string | null) => {
     const str = (methodName || '').toLowerCase();
     if (str.includes('phonepe') || str.includes('ybl')) return <PaymentBrandLogos.PhonePe />;
     if (str.includes('google') || str.includes('gpay') || str.includes('okaxis')) return <PaymentBrandLogos.GooglePay />;
@@ -336,62 +227,61 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
     return <PaymentBrandLogos.GenericUPI />;
   };
 
-  // Transactions list mapped from bookings (with sample transactions fallback)
-  const dbTransactions = bookings.map((b, idx) => {
-    const rawStatus = b.payment?.paymentStatus || (b.status === 'CONFIRMED' ? 'SUCCESS' : b.status === 'PAYMENT_VERIFIED' ? 'SUBMITTED' : 'PENDING');
-    let mappedStatus: 'Verified' | 'Pending' | 'Rejected' = 'Pending';
-    if (rawStatus === 'SUCCESS' || b.status === 'CONFIRMED' || b.status === 'PAYMENT_VERIFIED') mappedStatus = 'Verified';
-    if (b.status === 'REJECTED' || b.status === 'CANCELLED') mappedStatus = 'Rejected';
+  // Real Dynamic Transactions mapped from backend bookings
+  const transactions = bookings
+    .map((b) => {
+      const rawStatus = b.payment?.paymentStatus || (b.status === 'CONFIRMED' ? 'SUCCESS' : b.status === 'PAYMENT_VERIFIED' ? 'SUBMITTED' : 'PENDING');
+      let mappedStatus: 'Verified' | 'Pending' | 'Rejected' = 'Pending';
+      if (rawStatus === 'SUCCESS' || b.status === 'CONFIRMED' || b.status === 'PAYMENT_VERIFIED') mappedStatus = 'Verified';
+      if (b.status === 'REJECTED' || b.status === 'CANCELLED') mappedStatus = 'Rejected';
 
-    const bookingDateObj = b.createdAt ? new Date(b.createdAt) : new Date();
-    const formattedDate = bookingDateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+      const bookingDateObj = b.createdAt ? new Date(b.createdAt) : new Date();
+      const formattedDate = bookingDateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const utr = b.payment?.utrNumber || (b as any).utrNumber || `${123456789000 + idx * 4321}`;
-    const amount = b.totalAmount || (b.hourlyRate ? b.hourlyRate * b.durationHours : 1200);
+      const utr = b.payment?.utrNumber || (b as any).utrNumber || `UTR-${b.bookingCode}`;
+      const amount = b.totalAmount || (b.hourlyRate ? b.hourlyRate * b.durationHours : 1200);
 
-    return {
-      id: b.id,
-      userName: b.name || 'Client',
-      userInitial: (b.name || 'C').charAt(0).toUpperCase(),
-      utrNumber: utr,
-      amount: Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-      paymentMethod: b.payment?.paymentMethod ? b.payment.paymentMethod.replace('UPI_QR_', '').replace('GATEWAY_', '') : 'PhonePe',
-      qrCodeName: activeQR?.title || 'Meet By Vibe UPI',
-      status: mappedStatus,
-      transactionDate: formattedDate,
-      screenshotUrl: b.payment?.paymentScreenshotUrl || null
-    };
-  });
+      return {
+        id: b.id,
+        bookingCode: b.bookingCode,
+        userName: b.name || 'Client',
+        userInitial: (b.name || 'C').charAt(0).toUpperCase(),
+        utrNumber: utr,
+        amount: Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+        paymentMethod: b.payment?.paymentMethod ? b.payment.paymentMethod.replace('UPI_QR_', '').replace('GATEWAY_', '') : 'PhonePe',
+        qrCodeName: activeQR?.title || 'Meet By Vibe UPI',
+        status: mappedStatus,
+        transactionDate: formattedDate,
+        screenshotUrl: b.payment?.paymentScreenshotUrl || null,
+        performerName: b.performer?.name,
+        booking: b
+      };
+    })
+    .filter((item) => {
+      const matchesSearch = 
+        item.utrNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.amount.includes(searchQuery) ||
+        item.bookingCode.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
 
-  const allTransactions = dbTransactions.length > 0 ? dbTransactions : SAMPLE_TRANSACTIONS;
-
-  const filteredTransactions = allTransactions.filter((item) => {
-    const matchesSearch = 
-      item.utrNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.amount.includes(searchQuery);
-    
-    const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const handleVerifyTransaction = async (txId: string) => {
+  const handleVerifyTransaction = async (bookingId: string) => {
     try {
-      await updateBookingStatusMutation.mutateAsync({ id: txId, status: 'CONFIRMED' });
-    } catch {
-      // Local UI update for instant feedback
-      const target = allTransactions.find((t) => t.id === txId);
-      if (target) (target as any).status = 'Verified';
+      await updateBookingStatusMutation.mutateAsync({ id: bookingId, status: 'CONFIRMED' });
+    } catch (err: any) {
+      console.error('Failed to verify transaction:', err);
     }
   };
 
-  const handleRejectTransaction = async (txId: string) => {
-    if (confirm('Are you sure you want to reject this transaction?')) {
+  const handleRejectTransaction = async (bookingId: string) => {
+    if (confirm('Are you sure you want to reject this payment transaction?')) {
       try {
-        await updateBookingStatusMutation.mutateAsync({ id: txId, status: 'REJECTED' });
-      } catch {
-        const target = allTransactions.find((t) => t.id === txId);
-        if (target) (target as any).status = 'Rejected';
+        await updateBookingStatusMutation.mutateAsync({ id: bookingId, status: 'REJECTED' });
+      } catch (err: any) {
+        console.error('Failed to reject transaction:', err);
       }
     }
   };
@@ -405,7 +295,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', color: '#0f172a' }}>
       
-      {/* 1. Header Title & Top Actions (Matching Image) */}
+      {/* 1. Header Title & Top Actions (Matching Reference Image) */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', marginBottom: '2px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 3px 0' }}>
@@ -481,7 +371,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
         </div>
       )}
 
-      {/* 2. Top Card: Upload New QR Code (Exact matching UI) */}
+      {/* 2. Top Card: Upload New QR Code (100% Dynamic) */}
       <div 
         ref={topUploadCardRef}
         style={{
@@ -762,7 +652,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
         </form>
       </div>
 
-      {/* 3. Middle Card: Uploaded QR Codes (Exact matching 4 cards) */}
+      {/* 3. Middle Card: Uploaded QR Codes (Dynamic from Backend) */}
       <div style={{
         background: '#ffffff',
         borderRadius: '14px',
@@ -779,161 +669,175 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
           </p>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '16px'
-        }}>
-          {localQRs.map((qr) => {
-            const brand = qr.bankName || 'PhonePe';
-            return (
-              <div
-                key={qr.id}
-                style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {/* Header: Logo + Name & Active Status Badge */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {renderMethodIcon(brand)}
-                    <span style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
-                      {brand}
+        {isLoadingQRs ? (
+          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+            <Loader2 size={26} className="animate-spin" style={{ margin: '0 auto 8px auto', color: '#5b4df2' }} />
+            <span style={{ fontSize: '13px', fontWeight: 600 }}>Loading backend payment QR codes...</span>
+          </div>
+        ) : qrCodes.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '36px', border: '1.5px dashed #cbd5e1', borderRadius: '12px', color: '#64748b' }}>
+            <QrCode size={36} color="#94a3b8" style={{ margin: '0 auto 8px auto' }} />
+            <div style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>No QR Codes in Database</div>
+            <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
+              Upload your PhonePe, Google Pay, or Paytm QR code using the form above to start receiving booking payments.
+            </p>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '16px'
+          }}>
+            {qrCodes.map((qr) => {
+              const brand = qr.bankName || 'UPI';
+              return (
+                <div
+                  key={qr.id}
+                  style={{
+                    background: '#ffffff',
+                    border: qr.isPrimary ? '1.5px solid #5b4df2' : '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: qr.isPrimary ? '0 4px 14px rgba(91, 77, 242, 0.12)' : '0 1px 3px rgba(0,0,0,0.03)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {/* Header: Logo + Name & Active Status Badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {renderMethodIcon(brand)}
+                      <span style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
+                        {brand}
+                      </span>
+                    </div>
+
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      background: qr.isActive ? '#ecfdf5' : '#f1f5f9',
+                      color: qr.isActive ? '#059669' : '#64748b',
+                      border: qr.isActive ? '1px solid #a7f3d0' : '1px solid #cbd5e1'
+                    }}>
+                      {qr.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
 
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    background: qr.isActive ? '#ecfdf5' : '#f1f5f9',
-                    color: qr.isActive ? '#059669' : '#64748b',
-                    border: qr.isActive ? '1px solid #a7f3d0' : '1px solid #cbd5e1'
+                  {/* QR Image Box */}
+                  <div style={{
+                    width: '135px',
+                    height: '135px',
+                    margin: '0 auto 12px auto',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    padding: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#ffffff',
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.03)'
                   }}>
-                    {qr.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-
-                {/* QR Image Box */}
-                <div style={{
-                  width: '135px',
-                  height: '135px',
-                  margin: '0 auto 12px auto',
-                  borderRadius: '10px',
-                  border: '1px solid #e2e8f0',
-                  padding: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: '#ffffff',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.03)'
-                }}>
-                  <img
-                    src={qr.imageUrl}
-                    alt={qr.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '6px' }}
-                  />
-                </div>
-
-                {/* Display Name & UPI ID */}
-                <div style={{ textAlign: 'center', marginBottom: '14px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {qr.title}
+                    <img
+                      src={qr.imageUrl}
+                      alt={qr.title}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '6px' }}
+                    />
                   </div>
-                  <div style={{ fontSize: '11.5px', color: '#64748b', fontFamily: 'monospace', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {qr.upiId || 'No UPI ID'}
+
+                  {/* Display Name & UPI ID */}
+                  <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {qr.title}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#64748b', fontFamily: 'monospace', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {qr.upiId || 'No UPI ID'}
+                    </div>
+                  </div>
+
+                  {/* Actions: View, Edit, Delete */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setViewingQR(qr)}
+                      style={{
+                        padding: '6px 0',
+                        background: '#eff6ff',
+                        color: '#2563eb',
+                        border: '1px solid #bfdbfe',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '3px'
+                      }}
+                    >
+                      <Eye size={12} />
+                      <span>View</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setEditingQR(qr)}
+                      style={{
+                        padding: '6px 0',
+                        background: '#f8fafc',
+                        color: '#475569',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '3px'
+                      }}
+                    >
+                      <Edit3 size={12} />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Delete QR "${qr.title}"?`)) {
+                          deleteQRMutation.mutate(qr.id);
+                        }
+                      }}
+                      style={{
+                        padding: '6px 0',
+                        background: '#fef2f2',
+                        color: '#dc2626',
+                        border: '1px solid #fecaca',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '3px'
+                      }}
+                    >
+                      <Trash2 size={12} />
+                      <span>Delete</span>
+                    </button>
                   </div>
                 </div>
-
-                {/* Actions: View, Edit, Delete */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setViewingQR(qr)}
-                    style={{
-                      padding: '6px 0',
-                      background: '#eff6ff',
-                      color: '#2563eb',
-                      border: '1px solid #bfdbfe',
-                      borderRadius: '6px',
-                      fontSize: '11.5px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '3px'
-                    }}
-                  >
-                    <Eye size={12} />
-                    <span>View</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setEditingQR(qr)}
-                    style={{
-                      padding: '6px 0',
-                      background: '#f8fafc',
-                      color: '#475569',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '6px',
-                      fontSize: '11.5px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '3px'
-                    }}
-                  >
-                    <Edit3 size={12} />
-                    <span>Edit</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirm(`Delete QR "${qr.title}"?`)) {
-                        deleteQRMutation.mutate(qr.id);
-                        setLocalQRs((prev) => prev.filter((item) => item.id !== qr.id));
-                      }
-                    }}
-                    style={{
-                      padding: '6px 0',
-                      background: '#fef2f2',
-                      color: '#dc2626',
-                      border: '1px solid #fecaca',
-                      borderRadius: '6px',
-                      fontSize: '11.5px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '3px'
-                    }}
-                  >
-                    <Trash2 size={12} />
-                    <span>Delete</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* 4. Bottom Card: UTR Transactions (Exact matching table) */}
+      {/* 4. Bottom Card: UTR Transactions (Dynamic from Backend Bookings) */}
       <div style={{
         background: '#ffffff',
         borderRadius: '14px',
@@ -1035,158 +939,166 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
               </tr>
             </thead>
             <tbody>
-              {filteredTransactions.map((tx, idx) => (
-                <tr 
-                  key={tx.id || idx}
-                  style={{ 
-                    borderBottom: '1px solid #f1f5f9',
-                    transition: 'background 0.15s ease'
-                  }}
-                >
-                  {/* # */}
-                  <td style={{ padding: '12px 8px', color: '#64748b', fontWeight: 600 }}>
-                    {idx + 1}
-                  </td>
-
-                  {/* User */}
-                  <td style={{ padding: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '50%',
-                        background: '#e0e7ff',
-                        color: '#4338ca',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 800,
-                        fontSize: '12px',
-                        flexShrink: 0
-                      }}>
-                        {tx.userInitial}
-                      </div>
-                      <span style={{ fontWeight: 700, color: '#0f172a' }}>
-                        {tx.userName}
-                      </span>
-                    </div>
-                  </td>
-
-                  {/* UTR Number */}
-                  <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>
-                    {tx.utrNumber}
-                  </td>
-
-                  {/* Amount */}
-                  <td style={{ padding: '12px', fontWeight: 700, color: '#0f172a' }}>
-                    {tx.amount}
-                  </td>
-
-                  {/* Payment Method */}
-                  <td style={{ padding: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {renderMethodIcon(tx.paymentMethod)}
-                      <span style={{ fontWeight: 600, color: '#334155' }}>
-                        {tx.paymentMethod}
-                      </span>
-                    </div>
-                  </td>
-
-                  {/* QR Code */}
-                  <td style={{ padding: '12px', color: '#475569', fontWeight: 600 }}>
-                    {tx.qrCodeName}
-                  </td>
-
-                  {/* Status */}
-                  <td style={{ padding: '12px' }}>
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '3px 10px',
-                      borderRadius: '12px',
-                      fontSize: '11.5px',
-                      fontWeight: 700,
-                      background: tx.status === 'Verified' ? '#ecfdf5' : tx.status === 'Pending' ? '#fffbeb' : '#fef2f2',
-                      color: tx.status === 'Verified' ? '#059669' : tx.status === 'Pending' ? '#d97706' : '#dc2626',
-                      border: tx.status === 'Verified' ? '1px solid #a7f3d0' : tx.status === 'Pending' ? '1px solid #fde68a' : '1px solid #fecaca'
-                    }}>
-                      {tx.status}
-                    </span>
-                  </td>
-
-                  {/* Transaction Date */}
-                  <td style={{ padding: '12px', color: '#64748b', fontSize: '12px' }}>
-                    {tx.transactionDate}
-                  </td>
-
-                  {/* Actions */}
-                  <td style={{ padding: '12px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setViewingTransaction(tx)}
-                        style={{
-                          padding: '5px 9px',
-                          background: '#eff6ff',
-                          color: '#2563eb',
-                          border: '1px solid #bfdbfe',
-                          borderRadius: '6px',
-                          fontSize: '11.5px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '3px'
-                        }}
-                      >
-                        <Eye size={12} />
-                        <span>View</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleVerifyTransaction(tx.id)}
-                        style={{
-                          padding: '5px 9px',
-                          background: '#ecfdf5',
-                          color: '#059669',
-                          border: '1px solid #a7f3d0',
-                          borderRadius: '6px',
-                          fontSize: '11.5px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '3px'
-                        }}
-                      >
-                        <Check size={12} />
-                        <span>Verify</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRejectTransaction(tx.id)}
-                        style={{
-                          padding: '5px 9px',
-                          background: '#fef2f2',
-                          color: '#dc2626',
-                          border: '1px solid #fecaca',
-                          borderRadius: '6px',
-                          fontSize: '11.5px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '3px'
-                        }}
-                      >
-                        <X size={12} />
-                        <span>Reject</span>
-                      </button>
-                    </div>
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '36px', color: '#94a3b8' }}>
+                    No payment transactions matching your filter.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                transactions.map((tx, idx) => (
+                  <tr 
+                    key={tx.id || idx}
+                    style={{ 
+                      borderBottom: '1px solid #f1f5f9',
+                      transition: 'background 0.15s ease'
+                    }}
+                  >
+                    {/* # */}
+                    <td style={{ padding: '12px 8px', color: '#64748b', fontWeight: 600 }}>
+                      {idx + 1}
+                    </td>
+
+                    {/* User */}
+                    <td style={{ padding: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          background: '#e0e7ff',
+                          color: '#4338ca',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          flexShrink: 0
+                        }}>
+                          {tx.userInitial}
+                        </div>
+                        <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                          {tx.userName}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* UTR Number */}
+                    <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a' }}>
+                      {tx.utrNumber}
+                    </td>
+
+                    {/* Amount */}
+                    <td style={{ padding: '12px', fontWeight: 700, color: '#0f172a' }}>
+                      {tx.amount}
+                    </td>
+
+                    {/* Payment Method */}
+                    <td style={{ padding: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {renderMethodIcon(tx.paymentMethod)}
+                        <span style={{ fontWeight: 600, color: '#334155' }}>
+                          {tx.paymentMethod}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* QR Code */}
+                    <td style={{ padding: '12px', color: '#475569', fontWeight: 600 }}>
+                      {tx.qrCodeName}
+                    </td>
+
+                    {/* Status */}
+                    <td style={{ padding: '12px' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        fontSize: '11.5px',
+                        fontWeight: 700,
+                        background: tx.status === 'Verified' ? '#ecfdf5' : tx.status === 'Pending' ? '#fffbeb' : '#fef2f2',
+                        color: tx.status === 'Verified' ? '#059669' : tx.status === 'Pending' ? '#d97706' : '#dc2626',
+                        border: tx.status === 'Verified' ? '1px solid #a7f3d0' : tx.status === 'Pending' ? '1px solid #fde68a' : '1px solid #fecaca'
+                      }}>
+                        {tx.status}
+                      </span>
+                    </td>
+
+                    {/* Transaction Date */}
+                    <td style={{ padding: '12px', color: '#64748b', fontSize: '12px' }}>
+                      {tx.transactionDate}
+                    </td>
+
+                    {/* Actions */}
+                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setViewingTransaction(tx)}
+                          style={{
+                            padding: '5px 9px',
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            border: '1px solid #bfdbfe',
+                            borderRadius: '6px',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          <Eye size={12} />
+                          <span>View</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleVerifyTransaction(tx.id)}
+                          style={{
+                            padding: '5px 9px',
+                            background: '#ecfdf5',
+                            color: '#059669',
+                            border: '1px solid #a7f3d0',
+                            borderRadius: '6px',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          <Check size={12} />
+                          <span>Verify</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRejectTransaction(tx.id)}
+                          style={{
+                            padding: '5px 9px',
+                            background: '#fef2f2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                            borderRadius: '6px',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                          }}
+                        >
+                          <X size={12} />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -1222,7 +1134,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
               <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '13px' }}>{viewingQR.upiId}</span>
               <button
                 type="button"
-                onClick={() => handleCopy(viewingQR.upiId)}
+                onClick={() => handleCopy(viewingQR.upiId || '')}
                 style={{ background: 'none', border: 'none', color: '#5b4df2', fontWeight: 700, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 {copiedUpi ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
@@ -1236,7 +1148,6 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
                   type="button"
                   onClick={() => {
                     setPrimaryMutation.mutate(viewingQR.id);
-                    setLocalQRs((prev) => prev.map((item) => ({ ...item, isPrimary: item.id === viewingQR.id, isActive: item.id === viewingQR.id ? true : item.isActive })));
                     setViewingQR(null);
                   }}
                   style={{ flex: 1, padding: '10px', background: '#5b4df2', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '12.5px', cursor: 'pointer' }}
@@ -1320,11 +1231,10 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
                       id: editingQR.id,
                       data: {
                         title: editingQR.title,
-                        upiId: editingQR.upiId,
+                        upiId: editingQR.upiId || undefined,
                         isActive: editingQR.isActive
                       }
                     });
-                    setLocalQRs((prev) => prev.map((item) => item.id === editingQR.id ? { ...item, ...editingQR } : item));
                     setEditingQR(null);
                   }}
                   style={{ padding: '8px 16px', background: '#5b4df2', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '12.5px', cursor: 'pointer' }}
@@ -1356,8 +1266,8 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
               <div style={{ marginBottom: '6px' }}>User: <strong>{viewingTransaction.userName}</strong></div>
               <div style={{ marginBottom: '6px' }}>Amount: <strong style={{ color: '#059669', fontSize: '14px' }}>₹{viewingTransaction.amount}</strong></div>
               <div style={{ marginBottom: '6px' }}>Bank UTR: <code style={{ color: '#5b4df2', fontWeight: 700 }}>{viewingTransaction.utrNumber}</code></div>
-              <div style={{ marginBottom: '6px' }}>Payment Method: <strong>{viewingTransaction.paymentMethod}</strong></div>
-              <div>Status: <span style={{ fontWeight: 700, color: viewingTransaction.status === 'Verified' ? '#059669' : viewingTransaction.status === 'Pending' ? '#d97706' : '#dc2626' }}>{viewingTransaction.status}</span></div>
+              <div style={{ marginBottom: '6px' }}>Booking Code: <strong>{viewingTransaction.bookingCode}</strong></div>
+              <div>Payment Method: <strong>{viewingTransaction.paymentMethod}</strong></div>
             </div>
 
             {viewingTransaction.screenshotUrl ? (
