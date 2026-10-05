@@ -128,6 +128,7 @@ export interface AdminBooking {
   createdAt: string;
   
   payment?: AdminPayment;
+  payments?: AdminPayment[];
 }
 
 export type ActiveTab = 'users' | 'bookings' | 'payments';

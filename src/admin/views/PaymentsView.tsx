@@ -230,7 +230,8 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
   // Real Dynamic Transactions mapped from backend bookings
   const transactions = bookings
     .map((b) => {
-      const rawStatus = b.payment?.paymentStatus || (b.status === 'CONFIRMED' ? 'SUCCESS' : b.status === 'PAYMENT_VERIFIED' ? 'SUBMITTED' : 'PENDING');
+      const paymentObj = b.payment || (b as any).payments?.[0];
+      const rawStatus = paymentObj?.paymentStatus || (b.status === 'CONFIRMED' ? 'SUCCESS' : b.status === 'PAYMENT_VERIFIED' ? 'SUBMITTED' : 'PENDING');
       let mappedStatus: 'Verified' | 'Pending' | 'Rejected' = 'Pending';
       if (rawStatus === 'SUCCESS' || b.status === 'CONFIRMED' || b.status === 'PAYMENT_VERIFIED') mappedStatus = 'Verified';
       if (b.status === 'REJECTED' || b.status === 'CANCELLED') mappedStatus = 'Rejected';
@@ -238,8 +239,9 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
       const bookingDateObj = b.createdAt ? new Date(b.createdAt) : new Date();
       const formattedDate = bookingDateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 
-      const utr = b.payment?.utrNumber || (b as any).utrNumber || `UTR-${b.bookingCode}`;
+      const utr = paymentObj?.utrNumber || (b as any).utrNumber || `UTR-${b.bookingCode}`;
       const amount = b.totalAmount || (b.hourlyRate ? b.hourlyRate * b.durationHours : 1200);
+      const screenshot = paymentObj?.paymentScreenshotUrl || (b as any).paymentScreenshotUrl || (b as any).screenshotUrl || null;
 
       return {
         id: b.id,
@@ -248,11 +250,11 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
         userInitial: (b.name || 'C').charAt(0).toUpperCase(),
         utrNumber: utr,
         amount: Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
-        paymentMethod: b.payment?.paymentMethod ? b.payment.paymentMethod.replace('UPI_QR_', '').replace('GATEWAY_', '') : 'PhonePe',
+        paymentMethod: paymentObj?.paymentMethod ? paymentObj.paymentMethod.replace('UPI_QR_', '').replace('GATEWAY_', '') : 'PhonePe',
         qrCodeName: activeQR?.title || 'Meet By Vibe UPI',
         status: mappedStatus,
         transactionDate: formattedDate,
-        screenshotUrl: b.payment?.paymentScreenshotUrl || null,
+        screenshotUrl: screenshot,
         performerName: b.performer?.name,
         booking: b
       };
@@ -1252,38 +1254,118 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
         <div className="partner-modal-overlay" onClick={() => setViewingTransaction(null)}>
           <div
             className="partner-modal-card"
-            style={{ maxWidth: '440px', background: '#ffffff', color: '#0f172a', padding: '20px', borderRadius: '16px' }}
+            style={{ maxWidth: '480px', width: '100%', background: '#ffffff', color: '#0f172a', padding: '24px', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Transaction & Payment Details</h3>
-              <button onClick={() => setViewingTransaction(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>Transaction & Payment Details</h3>
+                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>Booking #{viewingTransaction.bookingCode}</span>
+                </div>
+              </div>
+              <button onClick={() => setViewingTransaction(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }}>
                 <X size={18} />
               </button>
             </div>
 
-            <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '14px', fontSize: '12.5px' }}>
-              <div style={{ marginBottom: '6px' }}>User: <strong>{viewingTransaction.userName}</strong></div>
-              <div style={{ marginBottom: '6px' }}>Amount: <strong style={{ color: '#059669', fontSize: '14px' }}>₹{viewingTransaction.amount}</strong></div>
-              <div style={{ marginBottom: '6px' }}>Bank UTR: <code style={{ color: '#5b4df2', fontWeight: 700 }}>{viewingTransaction.utrNumber}</code></div>
-              <div style={{ marginBottom: '6px' }}>Booking Code: <strong>{viewingTransaction.bookingCode}</strong></div>
-              <div>Payment Method: <strong>{viewingTransaction.paymentMethod}</strong></div>
+            <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '16px', fontSize: '12.5px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '11px', display: 'block' }}>Client Name</span>
+                  <strong style={{ color: '#0f172a' }}>{viewingTransaction.userName}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '11px', display: 'block' }}>Performer</span>
+                  <strong style={{ color: '#0f172a' }}>{viewingTransaction.performerName || 'Assigned Performer'}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '11px', display: 'block' }}>Total Amount</span>
+                  <strong style={{ color: '#059669', fontSize: '15px' }}>₹{viewingTransaction.amount}</strong>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '11px', display: 'block' }}>Payment Method</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                    {renderMethodIcon(viewingTransaction.paymentMethod)}
+                    <strong style={{ color: '#334155' }}>{viewingTransaction.paymentMethod}</strong>
+                  </div>
+                </div>
+                <div style={{ gridColumn: '1 / -1', background: '#ffffff', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', marginTop: '2px' }}>
+                  <span style={{ color: '#64748b', fontSize: '11px', display: 'block' }}>Bank UTR / Transaction Reference</span>
+                  <code style={{ color: '#5b4df2', fontWeight: 800, fontSize: '13px', letterSpacing: '0.5px' }}>{viewingTransaction.utrNumber}</code>
+                </div>
+              </div>
             </div>
 
-            {viewingTransaction.screenshotUrl ? (
-              <div style={{ textAlign: 'center', marginBottom: '14px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px', textAlign: 'left' }}>
-                  Uploaded Payment Screenshot:
-                </div>
-                <img
-                  src={viewingTransaction.screenshotUrl}
-                  alt="Receipt Screenshot"
-                  style={{ maxWidth: '100%', maxHeight: '280px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                />
+            {/* Uploaded Payment Screenshot Section */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Uploaded Payment Screenshot:</span>
+                {viewingTransaction.screenshotUrl && (
+                  <span style={{ fontSize: '11px', color: '#059669', fontWeight: 600 }}>✓ Proof Attached</span>
+                )}
               </div>
-            ) : null}
 
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              {viewingTransaction.screenshotUrl ? (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    position: 'relative',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    border: '1.5px solid #cbd5e1',
+                    background: '#0f172a',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '180px',
+                    maxHeight: '300px'
+                  }}>
+                    <img
+                      src={viewingTransaction.screenshotUrl}
+                      alt="Payment Proof Receipt"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '280px',
+                        objectFit: 'contain',
+                        borderRadius: '6px',
+                        display: 'block',
+                        margin: '0 auto'
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '8px' }}>
+                    <a
+                      href={viewingTransaction.screenshotUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '12px', color: '#5b4df2', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      <span>Open Full Size Image ↗</span>
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '24px 16px',
+                  background: '#f8fafc',
+                  borderRadius: '10px',
+                  border: '1.5px dashed #cbd5e1',
+                  color: '#64748b',
+                  fontSize: '12.5px'
+                }}>
+                  <AlertCircle size={24} color="#94a3b8" style={{ margin: '0 auto 8px', display: 'block' }} />
+                  <div style={{ fontWeight: 600, color: '#475569' }}>No Screenshot Uploaded</div>
+                  <div style={{ fontSize: '11.5px', marginTop: '2px', color: '#94a3b8' }}>Client submitted UTR only without receipt image</div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
               {viewingTransaction.status !== 'Verified' && (
                 <button
                   type="button"
@@ -1291,15 +1373,37 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
                     handleVerifyTransaction(viewingTransaction.id);
                     setViewingTransaction(null);
                   }}
-                  style={{ padding: '8px 14px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', borderRadius: '6px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+                  style={{
+                    padding: '9px 16px',
+                    background: '#ecfdf5',
+                    color: '#059669',
+                    border: '1.5px solid #a7f3d0',
+                    borderRadius: '8px',
+                    fontWeight: 700,
+                    fontSize: '12.5px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
                 >
-                  ✓ Verify Payment
+                  <Check size={14} />
+                  <span>Verify Payment</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setViewingTransaction(null)}
-                style={{ padding: '8px 14px', background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+                style={{
+                  padding: '9px 18px',
+                  background: '#0f172a',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '12.5px',
+                  cursor: 'pointer'
+                }}
               >
                 Close
               </button>

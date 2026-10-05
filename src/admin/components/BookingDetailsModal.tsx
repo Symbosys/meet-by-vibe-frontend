@@ -270,43 +270,61 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
           </div>
 
           {/* Payment & QR Section */}
-          <div style={{ background: 'rgba(15, 23, 42, 0.8)', padding: '16px', borderRadius: '10px', border: '1px solid #334155' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h4 style={{ margin: 0, fontSize: '12.5px', textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.5px' }}>
-                QR Payment Details
-              </h4>
-              <span className={`status-pill ${booking.payment?.paymentStatus || 'PENDING'}`}>
-                Payment: {booking.payment?.paymentStatus || 'PENDING'}
-              </span>
-            </div>
+          {(() => {
+            const paymentObj = booking.payment || booking.payments?.[0];
+            const screenshot = paymentObj?.paymentScreenshotUrl || (booking as any).paymentScreenshotUrl || null;
+            return (
+              <div style={{ background: 'rgba(15, 23, 42, 0.8)', padding: '16px', borderRadius: '10px', border: '1px solid #334155' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h4 style={{ margin: 0, fontSize: '12.5px', textTransform: 'uppercase', color: '#10b981', letterSpacing: '0.5px' }}>
+                    QR Payment Details
+                  </h4>
+                  <span className={`status-pill ${paymentObj?.paymentStatus || 'PENDING'}`}>
+                    Payment: {paymentObj?.paymentStatus || 'PENDING'}
+                  </span>
+                </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12.5px' }}>
-              <div>
-                <span style={{ color: '#94a3b8' }}>Total Amount:</span> <strong style={{ color: '#10b981', fontSize: '16px' }}>₹{booking.totalAmount}</strong>
-              </div>
-              <div>
-                <span style={{ color: '#94a3b8' }}>Transaction Ref:</span> <span style={{ color: '#f8fafc', fontFamily: 'monospace' }}>{booking.payment?.transactionRef || 'N/A'}</span>
-              </div>
-              <div>
-                <span style={{ color: '#94a3b8' }}>Bank UTR No:</span> <strong style={{ color: '#fbbf24', fontFamily: 'monospace' }}>{booking.payment?.utrNumber || 'Awaiting entry'}</strong>
-              </div>
-              <div>
-                <span style={{ color: '#94a3b8' }}>Method:</span> <strong style={{ color: '#fff' }}>{booking.payment?.paymentMethod || 'UPI_QR_DYNAMIC'}</strong>
-              </div>
-            </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12.5px' }}>
+                  <div>
+                    <span style={{ color: '#94a3b8' }}>Total Amount:</span> <strong style={{ color: '#10b981', fontSize: '16px' }}>₹{booking.totalAmount}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#94a3b8' }}>Transaction Ref:</span> <span style={{ color: '#f8fafc', fontFamily: 'monospace' }}>{paymentObj?.transactionRef || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span style={{ color: '#94a3b8' }}>Bank UTR No:</span> <strong style={{ color: '#fbbf24', fontFamily: 'monospace' }}>{paymentObj?.utrNumber || 'Awaiting entry'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#94a3b8' }}>Method:</span> <strong style={{ color: '#fff' }}>{paymentObj?.paymentMethod || 'UPI_QR_DYNAMIC'}</strong>
+                  </div>
+                </div>
 
-            {/* Proof screenshot if available */}
-            {booking.payment?.paymentScreenshotUrl && (
-              <div style={{ marginTop: '12px' }}>
-                <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Payment Screenshot / Receipt Proof:</span>
-                <img 
-                  src={booking.payment.paymentScreenshotUrl} 
-                  alt="Payment Proof" 
-                  style={{ maxHeight: '140px', borderRadius: '8px', border: '1px solid #475569' }} 
-                />
+                {/* Proof screenshot if available */}
+                {screenshot && (
+                  <div style={{ marginTop: '14px', borderTop: '1px solid #334155', paddingTop: '12px' }}>
+                    <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '6px' }}>Uploaded Payment Screenshot / Receipt Proof:</span>
+                    <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid #475569', background: '#0f172a', display: 'inline-block' }}>
+                      <img 
+                        src={screenshot} 
+                        alt="Payment Proof" 
+                        style={{ maxHeight: '180px', maxWidth: '100%', objectFit: 'contain', display: 'block' }} 
+                      />
+                    </div>
+                    <div style={{ marginTop: '4px' }}>
+                      <a 
+                        href={screenshot} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        style={{ color: '#38bdf8', fontSize: '11.5px', textDecoration: 'none' }}
+                      >
+                        Open Full Screenshot ↗
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            );
+          })()}
 
           {/* Notes */}
           {booking.notes && (
