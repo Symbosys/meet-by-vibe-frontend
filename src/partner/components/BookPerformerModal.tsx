@@ -1,30 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  X, 
-  Sparkles, 
-  Clock, 
-  MapPin, 
-  User, 
-  CheckCircle2, 
+import {
   AlertCircle,
-  Copy, 
-  Check, 
-  CreditCard, 
-  Calendar, 
-  Loader2,
+  Calendar,
   Camera,
-  Upload,
-  Trash2,
-  Link as LinkIcon,
-  ShieldCheck,
+  Check,
+  CheckCircle2,
+  Clock,
+  Copy,
+  CreditCard,
+  FileCheck2,
   Image as ImageIcon,
-  FileCheck2
+  Link as LinkIcon,
+  Loader2,
+  MapPin,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  Upload,
+  User,
+  X
 } from 'lucide-react';
-import type { GarbaPartner, GarbaEvent } from '../types/partner.types';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Gender } from '../../admin/types/admin.types';
 import { useInitiateBooking, useSubmitPaymentProof } from '../../hooks/useBookings';
 import { useActiveQRCode } from '../../hooks/useQR';
 import { compressImage } from '../../utils/imageCompression';
+import type { GarbaEvent, GarbaPartner } from '../types/partner.types';
 
 interface BookPerformerModalProps {
   partner: GarbaPartner | null;
@@ -280,7 +280,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const upiId = activeQR?.upiId || partner.upiId || 'garbamitra.pay@okaxis';
   const payeeName = activeQR?.accountHolderName || partner.name || 'GarbaMitra Platform';
   const fallbackUpiPayload = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${advanceAmount}&tn=${encodeURIComponent(`Booking ${bookingCode || 'GARBA'}`)}&cu=INR`;
-  const qrCodeUrl = activeQR?.imageUrl || dynamicQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(dynamicUpiPayload || fallbackUpiPayload)}`;
+  const qrCodeUrl = dynamicQrUrl || activeQR?.imageUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(dynamicUpiPayload || fallbackUpiPayload)}`;
 
   const handleProceedToPayment = async (e: React.FormEvent) => {
     e.preventDefault();
