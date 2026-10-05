@@ -16,11 +16,14 @@ import {
   Upload,
   Trash2,
   Link as LinkIcon,
-  ShieldCheck
+  ShieldCheck,
+  Image as ImageIcon,
+  FileCheck2
 } from 'lucide-react';
 import type { GarbaPartner, GarbaEvent } from '../types/partner.types';
 import type { Gender } from '../../admin/types/admin.types';
 import { useInitiateBooking, useSubmitPaymentProof } from '../../hooks/useBookings';
+import { useActiveQRCode } from '../../hooks/useQR';
 import { compressImage } from '../../utils/imageCompression';
 
 interface BookPerformerModalProps {
@@ -51,6 +54,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   // TanStack Query hooks
   const initiateBooking = useInitiateBooking();
   const submitPaymentProof = useSubmitPaymentProof();
+  const { data: activeQR } = useActiveQRCode();
 
   // Step 1: Booking Details, Step 2: QR Payment & UTR, Step 3: Success
   const [step, setStep] = useState<'form' | 'payment' | 'success'>('form');
@@ -70,6 +74,14 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const [showUrlInput, setShowUrlInput] = useState<boolean>(false);
   const [customUrl, setCustomUrl] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Payment Proof Screenshot Dynamic State with <= 100 KB auto-compression
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreviewUrl, setProofPreviewUrl] = useState<string>('');
+  const [isCompressingProof, setIsCompressingProof] = useState<boolean>(false);
+  const [proofCompressedSizeKB, setProofCompressedSizeKB] = useState<number | null>(null);
+  const [proofOriginalSizeKB, setProofOriginalSizeKB] = useState<number | null>(null);
+  const proofFileInputRef = useRef<HTMLInputElement>(null);
 
   // Event & Slot Timings
   const [bookingDate, setBookingDate] = useState('2026-10-18');
@@ -103,6 +115,10 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       setTimeLeftSeconds(900);
       setCreatedBookingId('');
       setUtrNumber('');
+      setProofFile(null);
+      setProofPreviewUrl('');
+      setProofCompressedSizeKB(null);
+      setProofOriginalSizeKB(null);
       setShowUrlInput(false);
       if (partner) {
         setCity(partner.city);
@@ -215,11 +231,56 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
     }
   };
 
+  // Handle Payment Screenshot Upload with strict <= 100 KB auto-compression
+  const handleProofFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('Please select a valid image file (PNG, JPG, WEBP, etc.) for payment receipt.');
+      return;
+    }
+
+    try {
+      setErrorMsg(null);
+      setIsCompressingProof(true);
+
+      // Compress strictly to <= 95 KB (under 100 KB limit)
+      const compressed = await compressImage(file, `utr-proof-${Date.now()}.jpg`, {
+        maxSizeKB: 95,
+        maxWidthOrHeight: 1024,
+        initialQuality: 0.82
+      });
+
+      setProofFile(compressed.file);
+      setProofPreviewUrl(compressed.dataUrl);
+      setProofCompressedSizeKB(compressed.sizeKB);
+      setProofOriginalSizeKB(compressed.originalSizeKB);
+    } catch (err: any) {
+      console.error('Screenshot compression error:', err);
+      setErrorMsg('Failed to process and compress screenshot. Please try another image.');
+    } finally {
+      setIsCompressingProof(false);
+    }
+  };
+
+  const handleRemoveProof = () => {
+    setProofFile(null);
+    setProofPreviewUrl('');
+    setProofCompressedSizeKB(null);
+    setProofOriginalSizeKB(null);
+    if (proofFileInputRef.current) {
+      proofFileInputRef.current.value = '';
+    }
+  };
+
   if (!isOpen || !partner) return null;
 
-  const upiId = partner.upiId || 'garbamitra.pay@okhdfcbank';
-  const fallbackUpiPayload = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(partner.name)}&am=${advanceAmount}&tn=${encodeURIComponent(`Booking ${bookingCode || 'GARBA'}`)}&cu=INR`;
-  const qrCodeUrl = dynamicQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(dynamicUpiPayload || fallbackUpiPayload)}`;
+  // Dynamic active QR & UPI ID from backend qr.routes / activeQR or performer fallback
+  const upiId = activeQR?.upiId || partner.upiId || 'garbamitra.pay@okaxis';
+  const payeeName = activeQR?.accountHolderName || partner.name || 'GarbaMitra Platform';
+  const fallbackUpiPayload = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${advanceAmount}&tn=${encodeURIComponent(`Booking ${bookingCode || 'GARBA'}`)}&cu=INR`;
+  const qrCodeUrl = activeQR?.imageUrl || dynamicQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(dynamicUpiPayload || fallbackUpiPayload)}`;
 
   const handleProceedToPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,10 +338,25 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
     try {
       setErrorMsg(null);
       if (createdBookingId) {
-        await submitPaymentProof.mutateAsync({
-          id: createdBookingId,
-          payload: { utrNumber: utrNumber.trim() },
-        });
+        if (proofFile) {
+          const formData = new FormData();
+          formData.append('utrNumber', utrNumber.trim());
+          formData.append('screenshot', proofFile);
+          await submitPaymentProof.mutateAsync({
+            id: createdBookingId,
+            payload: formData,
+          });
+        } else if (proofPreviewUrl) {
+          await submitPaymentProof.mutateAsync({
+            id: createdBookingId,
+            payload: { utrNumber: utrNumber.trim(), paymentScreenshotUrl: proofPreviewUrl },
+          });
+        } else {
+          await submitPaymentProof.mutateAsync({
+            id: createdBookingId,
+            payload: { utrNumber: utrNumber.trim() },
+          });
+        }
       }
 
       const bookingRecord = {
@@ -305,6 +381,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
         totalAmount,
         advanceAmount,
         utrNumber,
+        screenshotUrl: proofPreviewUrl,
         status: 'PAYMENT_VERIFIED',
       };
 
@@ -899,10 +976,10 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
           </form>
         )}
 
-        {/* STEP 2: Dynamic UPI QR Code Payment */}
+        {/* STEP 2: Dynamic UPI QR Code Payment & Screenshot Upload */}
         {step === 'payment' && (
           <form onSubmit={handleConfirmPayment}>
-            <div className="partner-modal-body" style={{ textAlign: 'center' }}>
+            <div className="partner-modal-body" style={{ textAlign: 'center', maxHeight: '72vh', overflowY: 'auto' }}>
               {errorMsg && (
                 <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '8px 12px', borderRadius: '8px', color: '#ef4444', fontSize: '12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <AlertCircle size={14} />
@@ -926,11 +1003,11 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                 </div>
               </div>
 
-              {/* QR Image */}
+              {/* Dynamic QR Image */}
               <div style={{
                 width: '190px',
                 height: '190px',
-                margin: '0 auto 14px auto',
+                margin: '0 auto 12px auto',
                 padding: '8px',
                 background: '#ffffff',
                 borderRadius: '16px',
@@ -940,7 +1017,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                 <img
                   src={qrCodeUrl}
                   alt="UPI QR Code"
-                  style={{ width: '100%', height: '100%', borderRadius: '10px' }}
+                  style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'contain' }}
                 />
               </div>
 
@@ -949,7 +1026,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                 Scan to Pay ₹{advanceAmount} via GPay / PhonePe / Paytm
               </div>
 
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#f1f5f9', padding: '6px 14px', borderRadius: '20px', fontSize: '12.5px', color: '#334155', marginBottom: '16px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#f1f5f9', padding: '6px 14px', borderRadius: '20px', fontSize: '12.5px', color: '#334155', marginBottom: '14px' }}>
                 <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{upiId}</span>
                 <button
                   type="button"
@@ -962,7 +1039,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
               </div>
 
               {/* UTR Number Input */}
-              <div style={{ textAlign: 'left', background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <div style={{ textAlign: 'left', background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
                   Enter 12-Digit Bank UTR / Transaction Reference ID *
                 </label>
@@ -974,11 +1051,11 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                   onChange={(e) => setUtrNumber(e.target.value)}
                   style={{
                     width: '100%',
-                    height: '42px',
+                    height: '40px',
                     borderRadius: '8px',
                     border: '1.5px solid #cbd5e1',
                     padding: '0 12px',
-                    fontSize: '14px',
+                    fontSize: '13.5px',
                     fontFamily: 'monospace',
                     fontWeight: 800,
                     color: '#0f172a',
@@ -986,21 +1063,175 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                     background: '#ffffff'
                   }}
                 />
-                <span style={{ fontSize: '10.5px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                <span style={{ fontSize: '10.5px', color: '#64748b', marginTop: '3px', display: 'block' }}>
                   Found on your payment app receipt after completing payment.
                 </span>
+              </div>
+
+              {/* PAYMENT SCREENSHOT UPLOAD FIELD (Strictly Compressed to <= 100 KB) */}
+              <div style={{
+                textAlign: 'left',
+                background: 'linear-gradient(135deg, #fdf4ff 0%, #ffffff 100%)',
+                padding: '14px',
+                borderRadius: '12px',
+                border: '1.5px solid #f0abfc',
+                boxShadow: '0 2px 8px rgba(217, 70, 239, 0.05)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <ImageIcon size={15} color="#c026d3" />
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>
+                      Payment Proof Screenshot (Optional but Recommended)
+                    </span>
+                  </div>
+
+                  {proofCompressedSizeKB !== null && (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: '#ecfdf5',
+                      color: '#059669',
+                      fontSize: '10.5px',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      border: '1px solid #a7f3d0'
+                    }}>
+                      <ShieldCheck size={12} />
+                      <span>{proofCompressedSizeKB} KB (&lt;100KB Safe)</span>
+                    </span>
+                  )}
+                </div>
+
+                <input
+                  type="file"
+                  ref={proofFileInputRef}
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={handleProofFileChange}
+                  style={{ display: 'none' }}
+                />
+
+                {!proofPreviewUrl ? (
+                  <div
+                    onClick={() => !isCompressingProof && proofFileInputRef.current?.click()}
+                    style={{
+                      border: '1.5px dashed #d8b4fe',
+                      borderRadius: '8px',
+                      padding: '14px',
+                      textAlign: 'center',
+                      cursor: isCompressingProof ? 'not-allowed' : 'pointer',
+                      background: '#ffffff',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {isCompressingProof ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#9333ea', fontSize: '12px', fontWeight: 700 }}>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Compressing screenshot to &lt; 100 KB...</span>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#fae8ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c026d3' }}>
+                          <Upload size={16} />
+                        </div>
+                        <div style={{ textAlign: 'left' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 700, color: '#3b0764' }}>
+                            Click or Drop Screenshot Here
+                          </div>
+                          <div style={{ fontSize: '10.5px', color: '#7e22ce' }}>
+                            Any size file (MB/KB) will be auto-compressed to &lt; 100 KB instantly
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: '#ffffff',
+                    border: '1px solid #e9d5ff',
+                    borderRadius: '8px',
+                    padding: '8px 12px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <img
+                        src={proofPreviewUrl}
+                        alt="Payment Proof"
+                        style={{
+                          width: '46px',
+                          height: '46px',
+                          borderRadius: '6px',
+                          objectFit: 'cover',
+                          border: '1.5px solid #d946ef'
+                        }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <FileCheck2 size={14} color="#10b981" />
+                          <span>Screenshot Compressed</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>
+                          {proofOriginalSizeKB ? `${proofOriginalSizeKB} KB ➔ ` : ''}
+                          <strong style={{ color: '#059669' }}>{proofCompressedSizeKB} KB</strong> (Ready to Upload)
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => proofFileInputRef.current?.click()}
+                        style={{
+                          background: '#f3e8ff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '6px 10px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: '#7e22ce',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Change
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemoveProof}
+                        style={{
+                          background: '#fef2f2',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '6px 10px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}
+                      >
+                        <Trash2 size={12} />
+                        <span>Remove</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="partner-modal-footer">
-              <button type="button" className="btn-partner-outline" onClick={() => setStep('form')} disabled={submitPaymentProof.isPending}>
+              <button type="button" className="btn-partner-outline" onClick={() => setStep('form')} disabled={submitPaymentProof.isPending || isCompressingProof}>
                 Back to Details
               </button>
-              <button type="submit" className="btn-partner-primary" disabled={submitPaymentProof.isPending}>
+              <button type="submit" className="btn-partner-primary" disabled={submitPaymentProof.isPending || isCompressingProof}>
                 {submitPaymentProof.isPending ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    <span>Verifying UTR Reference...</span>
+                    <span>Verifying & Uploading Proof...</span>
                   </>
                 ) : (
                   <>
@@ -1052,7 +1283,21 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
 
               <div style={{ marginBottom: '4px' }}>Booking Code: <strong style={{ color: '#ff1379' }}>{bookingCode}</strong></div>
               <div style={{ marginBottom: '4px' }}>Total Amount: <strong>₹{totalAmount}</strong> (Advance Paid: ₹{advanceAmount})</div>
-              <div>UTR Reference: <code style={{ color: '#0284c7' }}>{utrNumber}</code></div>
+              <div style={{ marginBottom: '4px' }}>UTR Reference: <code style={{ color: '#0284c7' }}>{utrNumber}</code></div>
+
+              {/* Payment Proof Preview if uploaded */}
+              {proofPreviewUrl && (
+                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <img
+                    src={proofPreviewUrl}
+                    alt="Receipt"
+                    style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', border: '1px solid #cbd5e1' }}
+                  />
+                  <div style={{ fontSize: '11.5px', color: '#059669', fontWeight: 700 }}>
+                    Payment screenshot verified (&lt;100 KB)
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
