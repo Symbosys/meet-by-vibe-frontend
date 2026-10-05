@@ -54,7 +54,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   // TanStack Query hooks
   const initiateBooking = useInitiateBooking();
   const submitPaymentProof = useSubmitPaymentProof();
-  const { data: activeQR } = useActiveQRCode();
+  const { data: activeQR, refetch: refetchActiveQR } = useActiveQRCode();
 
   // Step 1: Booking Details, Step 2: QR Payment & UTR, Step 3: Success
   const [step, setStep] = useState<'form' | 'payment' | 'success'>('form');
@@ -109,6 +109,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      refetchActiveQR();
       setStep('form');
       setErrorMsg(null);
       setCopiedUpi(false);
@@ -124,7 +125,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
         setCity(partner.city);
       }
     }
-  }, [isOpen, partner]);
+  }, [isOpen, partner, refetchActiveQR]);
 
   // Recalculate duration when time changes
   useEffect(() => {
@@ -277,10 +278,12 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   if (!isOpen || !partner) return null;
 
   // Dynamic active QR & UPI ID from backend qr.routes / activeQR or performer fallback
-  const upiId = activeQR?.upiId || partner.upiId || 'garbamitra.pay@okaxis';
-  const payeeName = activeQR?.accountHolderName || partner.name || 'GarbaMitra Platform';
+  const upiId = activeQR?.upiId || partner.upiId || 'meetbyvibe@ybl';
+  const payeeName = activeQR?.accountHolderName || activeQR?.title || partner.name || 'Meet By Vibe UPI';
   const fallbackUpiPayload = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${advanceAmount}&tn=${encodeURIComponent(`Booking ${bookingCode || 'GARBA'}`)}&cu=INR`;
-  const qrCodeUrl = dynamicQrUrl || activeQR?.imageUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(dynamicUpiPayload || fallbackUpiPayload)}`;
+  
+  // Prioritize the actual QR code uploaded by the admin
+  const qrCodeUrl = activeQR?.imageUrl || dynamicQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(dynamicUpiPayload || fallbackUpiPayload)}`;
 
   const handleProceedToPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1003,27 +1006,61 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                 </div>
               </div>
 
-              {/* Dynamic QR Image */}
+              {/* Admin-Uploaded Active QR Branding Badge */}
               <div style={{
-                width: '190px',
-                height: '190px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: '#ffffff',
+                border: '1.5px solid #ff1379',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                marginBottom: '10px',
+                boxShadow: '0 2px 8px rgba(255, 19, 121, 0.08)'
+              }}>
+                <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a' }}>
+                  {activeQR?.title || payeeName}
+                </span>
+                {activeQR?.bankName && (
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    background: '#ecfdf5',
+                    color: '#059669',
+                    border: '1px solid #a7f3d0'
+                  }}>
+                    {activeQR.bankName}
+                  </span>
+                )}
+              </div>
+
+              {/* Dynamic QR Image (Live Admin Uploaded QR Code) */}
+              <div style={{
+                width: '210px',
+                height: '210px',
                 margin: '0 auto 12px auto',
-                padding: '8px',
+                padding: '10px',
                 background: '#ffffff',
                 borderRadius: '16px',
                 border: '2px solid #ff1379',
-                boxShadow: '0 8px 24px rgba(255, 19, 121, 0.15)'
+                boxShadow: '0 8px 24px rgba(255, 19, 121, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative'
               }}>
                 <img
                   src={qrCodeUrl}
-                  alt="UPI QR Code"
+                  alt={activeQR?.title || "UPI Payment QR Code"}
                   style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'contain' }}
                 />
               </div>
 
               {/* Payee Info & Copy UPI */}
               <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
-                Scan to Pay ₹{advanceAmount} via GPay / PhonePe / Paytm
+                Scan to Pay ₹{advanceAmount} via {activeQR?.bankName || 'GPay / PhonePe / Paytm'}
               </div>
 
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#f1f5f9', padding: '6px 14px', borderRadius: '20px', fontSize: '12.5px', color: '#334155', marginBottom: '14px' }}>

@@ -12,7 +12,8 @@ export function useActiveQRCode() {
   return useQuery({
     queryKey: QR_KEYS.active(),
     queryFn: () => qrApi.getActive(),
-    staleTime: 1000 * 60 * 5, // 5 mins
+    staleTime: 1000 * 10, // 10s for instant sync
+    refetchOnWindowFocus: true,
   });
 }
 
