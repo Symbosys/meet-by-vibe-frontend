@@ -10,9 +10,7 @@ import {
   Trash2, 
   CheckCircle2, 
   Loader2, 
-  Star, 
-  Building2, 
-  UserCheck 
+  Star
 } from 'lucide-react';
 import { 
   useActiveQRCode, 
@@ -26,7 +24,7 @@ import { compressImage } from '../../utils/imageCompression';
 export const SettingsView: React.FC = () => {
   // TanStack Query Hooks for QR Codes
   const { data: activeQR, isLoading: isLoadingActive } = useActiveQRCode();
-  const { data: qrCodes = [], isLoading: isLoadingAll } = useAllQRCodes();
+  const { data: qrCodes = [] } = useAllQRCodes();
   const createQRMutation = useCreateQRCode();
   const setPrimaryMutation = useSetPrimaryQRCode();
   const deleteQRMutation = useDeleteQRCode();
