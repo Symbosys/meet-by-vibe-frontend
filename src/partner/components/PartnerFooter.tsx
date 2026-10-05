@@ -23,7 +23,7 @@ export const PartnerFooter: React.FC<PartnerFooterProps> = ({ selectedCity, onNa
               </div>
               <div className="partner-brand-text">
                 <div className="partner-brand-name" style={{ color: '#ffffff' }}>
-                  Garba<span style={{ color: '#ff1379' }}>Mitra</span>
+                  MeetBy<span style={{ color: '#ff1379' }}>Vibe</span>
                 </div>
                 <div className="partner-brand-tagline" style={{ color: '#ff1379' }}>
                   No Partner? We've Got You.
@@ -32,7 +32,7 @@ export const PartnerFooter: React.FC<PartnerFooterProps> = ({ selectedCity, onNa
             </div>
 
             <p className="partner-footer-desc">
-              GarbaMitra is India's premier festival partner discovery platform. We connect verified dancers for public Garba, Dandiya, and Navratri celebrations.
+              MeetByVibe is India's premier festival partner discovery platform. We connect verified dancers for public Garba, Dandiya, and Navratri celebrations.
             </p>
 
             <div className="partner-18-badge">

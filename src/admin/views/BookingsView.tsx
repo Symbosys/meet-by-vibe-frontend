@@ -111,28 +111,69 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                     </div>
                   </td>
 
-                  {/* Booker info */}
+                  {/* Booker info with exact DB avatar or No-Photo placeholder */}
                   <td>
-                    <div style={{ fontWeight: 600, fontSize: '13px' }}>{b.name}</div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                      {b.phone} • {b.gender}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {b.customer?.avatarUrl || (b as any).avatarUrl ? (
+                        <img
+                          src={(b.customer?.avatarUrl || (b as any).avatarUrl)!}
+                          alt={b.name}
+                          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #10b981', flexShrink: 0 }}
+                          title="Client Photo (Uploaded during booking)"
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            border: '1px dashed rgba(239, 68, 68, 0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#f87171',
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            flexShrink: 0
+                          }}
+                          title="No photo was uploaded during booking"
+                        >
+                          N/A
+                        </div>
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '13px', color: '#ffffff' }}>{b.name}</div>
+                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          {b.phone} • <span style={{ color: b.gender === 'FEMALE' ? '#f472b6' : '#60a5fa' }}>{b.gender}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>{b.email}</div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{b.email}</div>
+                    <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
                       📍 {b.address}
                     </div>
                   </td>
 
                   {/* Performer */}
                   <td>
-                    <div style={{ fontWeight: 600, color: '#ec4899', fontSize: '13px' }}>
-                      {b.performer?.name || 'Artist'}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                      ₹{b.hourlyRate}/hour
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <img
+                        src={b.performer?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
+                        alt={b.performer?.name || 'Performer'}
+                        style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #ec4899', flexShrink: 0 }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 600, color: '#ec4899', fontSize: '13px' }}>
+                          {b.performer?.name || 'Artist'}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          ₹{b.hourlyRate}/hour
+                        </div>
+                      </div>
                     </div>
                     {b.performer?.upiId && (
-                      <div style={{ fontSize: '10px', color: '#38bdf8', fontFamily: 'monospace' }}>
+                      <div style={{ fontSize: '10px', color: '#38bdf8', fontFamily: 'monospace', marginTop: '2px' }}>
                         UPI: {b.performer.upiId}
                       </div>
                     )}

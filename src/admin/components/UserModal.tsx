@@ -52,6 +52,7 @@ export const UserModal: React.FC<UserModalProps> = ({
     avatarUrl: '',
     role: 'PERFORMER',
     gender: 'FEMALE',
+    dateOfBirth: '2000-01-15',
     height: 165,
     city: 'Ahmedabad',
     state: 'Gujarat',
@@ -101,7 +102,10 @@ export const UserModal: React.FC<UserModalProps> = ({
     setGalleryFiles({});
 
     if (user) {
-      setFormData(user);
+      setFormData({
+        ...user,
+        dateOfBirth: user.dateOfBirth ? user.dateOfBirth.split('T')[0] : '2000-01-15'
+      });
       setAvatarUrlInput(user.avatarUrl || '');
     } else {
       setFormData({
@@ -111,6 +115,7 @@ export const UserModal: React.FC<UserModalProps> = ({
         avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
         role: 'PERFORMER',
         gender: 'FEMALE',
+        dateOfBirth: '2000-01-15',
         height: 165,
         city: 'Ahmedabad',
         state: 'Gujarat',
@@ -152,6 +157,7 @@ export const UserModal: React.FC<UserModalProps> = ({
       payload.append('phone', formData.phone || '');
       payload.append('role', formData.role || 'PERFORMER');
       payload.append('gender', formData.gender || 'FEMALE');
+      if (formData.dateOfBirth) payload.append('dateOfBirth', formData.dateOfBirth);
       if (formData.height) payload.append('height', String(formData.height));
       if (formData.city) payload.append('city', formData.city);
       if (formData.state) payload.append('state', formData.state);
@@ -654,7 +660,7 @@ export const UserModal: React.FC<UserModalProps> = ({
               </div>
             </div>
 
-            {/* Physical & Location Details */}
+            {/* Physical & Personal Details */}
             <div className="admin-form-row">
               <div className="admin-form-group">
                 <label>Gender</label>
@@ -667,6 +673,17 @@ export const UserModal: React.FC<UserModalProps> = ({
                   <option value="MALE">Male</option>
                   <option value="OTHER">Other</option>
                 </select>
+              </div>
+
+              <div className="admin-form-group">
+                <label>Date of Birth</label>
+                <input
+                  type="date"
+                  className="admin-form-control"
+                  style={{ colorScheme: 'dark' }}
+                  value={formData.dateOfBirth ? formData.dateOfBirth.split('T')[0] : ''}
+                  onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                />
               </div>
 
               <div className="admin-form-group">

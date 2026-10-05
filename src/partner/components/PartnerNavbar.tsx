@@ -54,7 +54,7 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
             </div>
             <div className="partner-brand-text">
               <div className="partner-brand-name">
-                Garba<span>Mitra</span>
+                MeetBy<span>Vibe</span>
               </div>
               <div className="partner-brand-tagline">
                 No Partner? We've Got You.
