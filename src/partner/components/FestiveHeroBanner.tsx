@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Sparkles, Calendar, MapPin, Clock } from 'lucide-react';
+import { Calendar, Clock, MapPin, Sparkles } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { HERO_BANNERS } from '../data/partnerMockData';
 import type { GarbaEvent } from '../types/partner.types';
 

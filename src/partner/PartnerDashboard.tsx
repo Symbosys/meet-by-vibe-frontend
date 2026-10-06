@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { AdminUser } from '../admin/types/admin.types';
-import { useUsers } from '../hooks/useUsers';
 import { useEvents } from '../hooks/useEvents';
+import { useUsers } from '../hooks/useUsers';
 import { BookPerformerModal } from './components/BookPerformerModal';
 import { EventDetailsModal } from './components/EventDetailsModal';
 import { FestiveHeroBanner } from './components/FestiveHeroBanner';

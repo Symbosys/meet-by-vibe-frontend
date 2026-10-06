@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Check, 
-  Heart, 
-  Sparkles
+import {
+    Calendar,
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    Heart,
+    MapPin,
+    Sparkles
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import type { GarbaEvent } from '../types/partner.types';
 
 interface UpcomingEventsSectionProps {
