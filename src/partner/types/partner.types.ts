@@ -40,6 +40,7 @@ export interface GarbaEvent {
   imageUrl: string;
   date: string;
   time: string;
+  endTime?: string;
   venue: string;
   city: string;
   state: string;
@@ -49,6 +50,22 @@ export interface GarbaEvent {
   description: string;
   pricePerPass?: number;
   isFavorite?: boolean;
+  slug?: string;
+  address?: string;
+  pincode?: string;
+  dressCode?: string;
+  rules?: string[];
+  totalCapacity?: number;
+  organizerName?: string;
+  organizerContact?: string;
+  status?: string;
+  galleryImages?: string[];
+  endDate?: string;
+  latitude?: number;
+  longitude?: number;
+  isActive?: boolean;
+  country?: string;
+  rawDate?: string;
 }
 
 export interface PartnerRequest {

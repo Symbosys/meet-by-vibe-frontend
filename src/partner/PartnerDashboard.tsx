@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { AdminUser } from '../admin/types/admin.types';
 import { useUsers } from '../hooks/useUsers';
+import { useEvents } from '../hooks/useEvents';
 import { BookPerformerModal } from './components/BookPerformerModal';
 import { EventDetailsModal } from './components/EventDetailsModal';
 import { FestiveHeroBanner } from './components/FestiveHeroBanner';
@@ -96,6 +97,12 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
     limit: 50,
   });
 
+  // Dynamic DB Events using TanStack Query
+  const { data: eventsData } = useEvents({
+    page: 1,
+    limit: 50,
+  });
+
   const dynamicPartners: GarbaPartner[] = useMemo(() => {
     if (!usersData?.users || usersData.users.length === 0) return [];
     return usersData.users
@@ -103,8 +110,25 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
       .map((u) => mapAdminUserToPartner(u, favoritePartnerIds));
   }, [usersData, favoritePartnerIds]);
 
-  // Data States
-  const [events, setEvents] = useState<GarbaEvent[]>(UPCOMING_EVENTS);
+  // Local state for event interactive actions (bookmark / RSVP)
+  const [localEventState, setLocalEventState] = useState<Record<string, { isFavorite?: boolean; isJoined?: boolean }>>({});
+
+  // Dynamic Events: use real created events from DB, fallback to UPCOMING_EVENTS if none exist
+  const displayedEvents: GarbaEvent[] = useMemo(() => {
+    const dbEvents = eventsData?.data?.events;
+    const baseEvents = (dbEvents && dbEvents.length > 0) ? dbEvents : UPCOMING_EVENTS;
+
+    return baseEvents.map((evt) => {
+      const override = localEventState[evt.id];
+      if (!override) return evt;
+      return {
+        ...evt,
+        ...(override.isFavorite !== undefined ? { isFavorite: override.isFavorite } : {}),
+        ...(override.isJoined !== undefined ? { isJoined: override.isJoined } : {}),
+      };
+    });
+  }, [eventsData, localEventState]);
+
   const [requests, setRequests] = useState<PartnerRequest[]>(INITIAL_REQUESTS);
   const [bookedPerformersCount, setBookedPerformersCount] = useState(1);
 
@@ -138,7 +162,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
     partnerRequests: requests.length,
     matches: dynamicPartners.length > 0 ? Math.min(dynamicPartners.length, 6) : 4,
     newMessages: 8,
-    upcomingEvents: events.filter(e => e.isJoined).length + bookedPerformersCount,
+    upcomingEvents: displayedEvents.filter(e => e.isJoined).length + bookedPerformersCount,
   };
 
   // Handlers
@@ -162,15 +186,32 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   };
 
   const handleToggleSaveEvent = (eventId: string) => {
-    setEvents((prev) =>
-      prev.map((e) => (e.id === eventId ? { ...e, isFavorite: !e.isFavorite } : e))
-    );
+    setLocalEventState((prev) => {
+      const current = displayedEvents.find((e) => e.id === eventId);
+      const isFav = prev[eventId]?.isFavorite !== undefined ? prev[eventId].isFavorite : current?.isFavorite;
+      return {
+        ...prev,
+        [eventId]: {
+          ...prev[eventId],
+          isFavorite: !isFav,
+        },
+      };
+    });
   };
 
   const handleToggleJoinEvent = (eventId: string) => {
-    setEvents((prev) =>
-      prev.map((e) => (e.id === eventId ? { ...e, isJoined: !e.isJoined } : e))
-    );
+    setSelectedEvent((prev) => (prev && prev.id === eventId ? { ...prev, isJoined: !prev.isJoined } : prev));
+    setLocalEventState((prev) => {
+      const current = displayedEvents.find((e) => e.id === eventId);
+      const isJoined = prev[eventId]?.isJoined !== undefined ? prev[eventId].isJoined : current?.isJoined;
+      return {
+        ...prev,
+        [eventId]: {
+          ...prev[eventId],
+          isJoined: !isJoined,
+        },
+      };
+    });
   };
 
   const handleViewEventDetails = (event: GarbaEvent) => {
@@ -227,8 +268,11 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
 
       {/* Main Body Container */}
       <main className="partner-container" style={{ paddingBottom: '60px' }}>
-        {/* Festive Hero Carousel */}
-        <FestiveHeroBanner />
+        {/* Festive Hero Carousel with Real Admin Events */}
+        <FestiveHeroBanner
+          events={displayedEvents}
+          onSelectEvent={handleViewEventDetails}
+        />
 
         {/* 4 Stats Cards */}
         <StatsRow stats={stats} onSelectStat={handleSelectStat} />
@@ -236,7 +280,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
         {/* Upcoming Event Section */}
         <div id="events-section">
           <UpcomingEventsSection
-            events={events}
+            events={displayedEvents}
             onViewEventDetails={handleViewEventDetails}
             onFindPartnerForEvent={handleFindPartnerForEvent}
             onToggleSaveEvent={handleToggleSaveEvent}
@@ -269,7 +313,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
       {/* Comprehensive Booking Modal matching Prisma schema */}
       <BookPerformerModal
         partner={selectedPartner}
-        events={events}
+        events={displayedEvents}
         isOpen={isBookModalOpen}
         onClose={() => setIsBookModalOpen(false)}
         onBookingComplete={handleBookingComplete}

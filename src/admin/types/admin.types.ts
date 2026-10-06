@@ -131,4 +131,4 @@ export interface AdminBooking {
   payments?: AdminPayment[];
 }
 
-export type ActiveTab = 'users' | 'bookings' | 'payments';
+export type ActiveTab = 'users' | 'events' | 'bookings' | 'payments';

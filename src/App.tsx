@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import PartnerDashboard from './partner/PartnerDashboard';
 import AdminDashboard from './admin/AdminDashboard';
+import CreateEventScreen from './admin/CreateEventScreen';
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -11,6 +12,16 @@ function AppRoutes() {
       <Route
         path="/"
         element={<PartnerDashboard onSwitchToAdmin={() => navigate('/admin')} />}
+      />
+
+      {/* Direct Event Creation Screen (Matching Exact UI) */}
+      <Route
+        path="/create-event"
+        element={<CreateEventScreen onBack={() => navigate('/admin')} />}
+      />
+      <Route
+        path="/admin/events/create"
+        element={<CreateEventScreen onBack={() => navigate('/admin')} />}
       />
 
       {/* Admin Route: http://localhost:5173/admin -> Admin Dashboard */}

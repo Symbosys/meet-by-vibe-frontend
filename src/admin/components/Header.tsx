@@ -20,6 +20,10 @@ export const Header: React.FC<HeaderProps> = ({
       title: 'User & Performer Models',
       subtitle: 'Manage dancer profiles, height, dance styles, and hourly rates.'
     },
+    events: {
+      title: 'Garba & Dandiya Events',
+      subtitle: 'Create Navratri Mahotsavs, configure ticket passes, timing & venue details.'
+    },
     bookings: {
       title: 'Booking & Slot Management',
       subtitle: 'Track reservations, timing slots, and QR payment confirmations.'

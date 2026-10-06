@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -20,20 +20,40 @@ interface UpcomingEventsSectionProps {
 
 export const UpcomingEventsSection: React.FC<UpcomingEventsSectionProps> = ({
   events,
+  onViewEventDetails,
   onToggleSaveEvent,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    if (!events || events.length <= 1 || isPaused) return;
+
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev === events.length - 1 ? 0 : prev + 1));
+    }, 3500);
+
+    return () => clearInterval(timer);
+  }, [events, isPaused]);
 
   if (!events || events.length === 0) return null;
 
   const currentEvent = events[currentIndex];
 
-  const handlePrev = () => {
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setCurrentIndex((prev) => (prev === 0 ? events.length - 1 : prev - 1));
   };
 
-  const handleNext = () => {
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setCurrentIndex((prev) => (prev === events.length - 1 ? 0 : prev + 1));
+  };
+
+  const handleCardClick = () => {
+    if (onViewEventDetails) {
+      onViewEventDetails(currentEvent);
+    }
   };
 
   return (
@@ -60,7 +80,16 @@ export const UpcomingEventsSection: React.FC<UpcomingEventsSectionProps> = ({
       </div>
 
       {/* Event Card */}
-      <div className="partner-event-card">
+      <div 
+        className="partner-event-card"
+        onClick={handleCardClick}
+        style={{ cursor: 'pointer' }}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onTouchStart={() => setIsPaused(true)}
+        onTouchEnd={() => setIsPaused(false)}
+        title="Click to view full event details"
+      >
         {/* Event Media Left */}
         <div className="partner-event-img-wrap">
           <img
@@ -77,8 +106,12 @@ export const UpcomingEventsSection: React.FC<UpcomingEventsSectionProps> = ({
           )}
 
           <button
+            type="button"
             className="partner-event-heart-btn"
-            onClick={() => onToggleSaveEvent(currentEvent.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSaveEvent(currentEvent.id);
+            }}
             title="Save to favorites"
           >
             <Heart size={16} fill={currentEvent.isFavorite ? '#ff1379' : 'none'} />
@@ -116,15 +149,15 @@ export const UpcomingEventsSection: React.FC<UpcomingEventsSectionProps> = ({
 
           <div className="partner-event-attendees">
             <div className="partner-avatar-group">
-              {currentEvent.attendeeAvatars.map((av, idx) => (
+              {(currentEvent.attendeeAvatars || []).map((av, idx) => (
                 <img key={idx} src={av} alt="Attendee" />
               ))}
             </div>
             <span className="partner-attendee-count">
-              +{currentEvent.attendeesCount} people going
+              +{currentEvent.attendeesCount ?? 0} people going
             </span>
             <span className="partner-looking-badge">
-              {currentEvent.lookingForPartnerCount} looking for partner
+              {currentEvent.lookingForPartnerCount ?? 0} looking for partner
             </span>
           </div>
         </div>

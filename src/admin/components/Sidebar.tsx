@@ -1,6 +1,7 @@
 import React from 'react';
 import { 
   Users, 
+  Calendar,
   CalendarCheck, 
   QrCode, 
   Sparkles, 
@@ -15,6 +16,7 @@ interface SidebarProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   userCount: number;
+  eventCount?: number;
   bookingCount: number;
   pendingCount: number;
   isOpen: boolean;
@@ -25,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
   userCount,
+  eventCount = 0,
   bookingCount,
   pendingCount,
   isOpen,
@@ -34,6 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     { id: 'users' as ActiveTab, label: 'User & Performer Models', icon: Users, badge: userCount },
+    { id: 'events' as ActiveTab, label: 'Events & Dandiya Nights', icon: Calendar, badge: eventCount },
     { id: 'bookings' as ActiveTab, label: 'Bookings & Slots', icon: CalendarCheck, badge: pendingCount > 0 ? `${pendingCount} Pending` : `${bookingCount}` },
     { id: 'payments' as ActiveTab, label: 'QR Payments & UTR', icon: QrCode },
   ];
