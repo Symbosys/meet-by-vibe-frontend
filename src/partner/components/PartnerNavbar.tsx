@@ -1,14 +1,10 @@
 import { State } from 'country-state-city';
 import {
-    ChevronDown,
-    Crown,
-    MapPin,
-    Search,
-    Shield,
-    SlidersHorizontal
+  ChevronDown,
+  MapPin,
+  Search
 } from 'lucide-react';
-import React, { useMemo, useState } from 'react';
-import { CURRENT_USER } from '../data/partnerMockData';
+import React, { useMemo } from 'react';
 
 interface PartnerNavbarProps {
   searchQuery: string;
@@ -27,10 +23,7 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
   selectedState,
   selectedCity,
   onOpenLocationModal,
-  onSwitchToAdmin,
 }) => {
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-
   // Dynamic State ISO Code from country-state-city
   const stateIsoCode = useMemo(() => {
     const indianStates = State.getStatesOfCountry('IN');
@@ -90,108 +83,11 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
               <span>{selectedCity}</span>
               <ChevronDown size={13} />
             </button>
-
-            {/* User Profile Pill */}
-            <div style={{ position: 'relative' }}>
-              <button 
-                className="partner-user-nav-pill"
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-              >
-                <img
-                  src={CURRENT_USER.avatarUrl}
-                  alt={CURRENT_USER.name}
-                  className="partner-user-nav-avatar"
-                />
-                <div className="partner-user-nav-info">
-                  <span className="partner-user-nav-name">{CURRENT_USER.name}</span>
-                  <span className="partner-user-nav-badge">
-                    <Crown size={11} />
-                    <span>Premium</span>
-                  </span>
-                </div>
-                <ChevronDown size={13} color="#64748b" />
-              </button>
-
-              {/* Profile Dropdown */}
-              {showProfileMenu && (
-                <div style={{
-                  position: 'absolute',
-                  top: '46px',
-                  right: 0,
-                  width: '220px',
-                  background: '#ffffff',
-                  borderRadius: '14px',
-                  boxShadow: '0 10px 28px rgba(15, 23, 42, 0.15)',
-                  border: '1px solid #e2e8f0',
-                  padding: '8px',
-                  zIndex: 200,
-                  animation: 'fadeIn 0.2s ease'
-                }}>
-                  <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                    <div style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a' }}>{CURRENT_USER.fullName}</div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>Verified VIP Member</div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      onSwitchToAdmin();
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      background: 'none',
-                      border: 'none',
-                      color: '#0f172a',
-                      fontSize: '12.5px',
-                      fontWeight: 600,
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      marginTop: '4px'
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#fdf2f8')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-                  >
-                    <Shield size={14} color="#ff1379" />
-                    <span>Switch to Admin Panel</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      onOpenLocationModal();
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      background: 'none',
-                      border: 'none',
-                      color: '#0f172a',
-                      fontSize: '12.5px',
-                      fontWeight: 600,
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      textAlign: 'left'
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
-                  >
-                    <SlidersHorizontal size={14} color="#64748b" />
-                    <span>Change Preferences</span>
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
     </header>
   );
 };
+
+export default PartnerNavbar;

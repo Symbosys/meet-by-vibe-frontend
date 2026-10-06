@@ -12,11 +12,13 @@ import { UserModal } from './components/UserModal';
 import { EventModal } from './components/EventModal';
 import { BookingDetailsModal } from './components/BookingDetailsModal';
 import { CreateEventScreen } from './CreateEventScreen';
+import { AdminPinLockScreen } from './components/AdminPinLockScreen';
 import { useUsers } from '../hooks/useUsers';
 import { useEvents } from '../hooks/useEvents';
 import { useBookings, useUpdateBookingStatus } from '../hooks/useBookings';
 
 export const AdminDashboard: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('users');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
@@ -104,6 +106,10 @@ export const AdminDashboard: React.FC = () => {
   const pendingBookingsCount = bookings.filter(
     (b) => b.status === 'PENDING' || b.status === 'PAYMENT_VERIFIED'
   ).length;
+
+  if (!isAuthenticated) {
+    return <AdminPinLockScreen onAuthenticated={() => setIsAuthenticated(true)} />;
+  }
 
   if (isCreateEventScreenOpen) {
     return <CreateEventScreen onBack={() => setIsCreateEventScreenOpen(false)} />;

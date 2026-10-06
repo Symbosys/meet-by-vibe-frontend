@@ -1,0 +1,289 @@
+/* ==========================================================================
+   GARBAHUB - ADMIN PIN LOCK SCREEN
+   Exact UI Match with Festive Garba Dancers Background & Card
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+.admin-lock-screen {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fef7ee;
+  background-image: url('/admin-garba-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  padding: 24px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Warm subtle ambient backdrop overlay */
+.admin-lock-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(254, 247, 238, 0.25) 0%, rgba(254, 243, 199, 0.35) 100%);
+  pointer-events: none;
+}
+
+/* Center Card */
+.admin-lock-card {
+  position: relative;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 28px;
+  box-shadow: 
+    0 25px 60px rgba(180, 83, 9, 0.18),
+    0 10px 25px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.9);
+  padding: 40px 38px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  animation: adminLockCardEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes adminLockCardEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Logo & Header */
+.admin-lock-logo-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.admin-lock-logo-icon {
+  width: 58px;
+  height: 52px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-lock-brand-name {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.admin-lock-brand-name .brand-garba {
+  color: #881337; /* Rich crimson */
+}
+
+.admin-lock-brand-name .brand-hub {
+  color: #d97706; /* Festive gold */
+}
+
+.admin-lock-access-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 3.5px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+/* Lotus Divider */
+.admin-lock-lotus-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 14px auto 20px;
+  width: 80%;
+}
+
+.admin-lock-lotus-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #fed7aa, transparent);
+}
+
+.admin-lock-lotus-icon {
+  color: #e11d48;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* Headings */
+.admin-lock-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.3px;
+}
+
+.admin-lock-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0 0 28px 0;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+/* Error Alert */
+.admin-lock-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  animation: adminLockShake 0.35s ease-in-out;
+}
+
+/* 6-Digit PIN Grid */
+.admin-lock-pin-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.admin-lock-pin-grid.shake {
+  animation: adminLockShake 0.4s ease-in-out;
+}
+
+@keyframes adminLockShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.admin-lock-pin-input {
+  width: 100%;
+  height: 58px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  font-size: 24px;
+  font-weight: 800;
+  text-align: center;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  caret-color: #881337;
+}
+
+.admin-lock-pin-input:hover {
+  border-color: #cbd5e1;
+}
+
+.admin-lock-pin-input:focus,
+.admin-lock-pin-input.active {
+  border-color: #881337;
+  background: #ffffff;
+  box-shadow: 0 0 0 3.5px rgba(136, 19, 55, 0.14);
+  transform: translateY(-2px);
+}
+
+.admin-lock-pin-input.filled {
+  border-color: #f59e0b;
+  background: #fffdfa;
+}
+
+/* Submit Button */
+.admin-lock-submit-btn {
+  width: 100%;
+  height: 52px;
+  background: linear-gradient(135deg, #881337 0%, #9f1239 100%);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 18px rgba(136, 19, 55, 0.35);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-lock-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(136, 19, 55, 0.45);
+  background: linear-gradient(135deg, #9f1239 0%, #be123c 100%);
+}
+
+.admin-lock-submit-btn:active {
+  transform: translateY(0);
+}
+
+.admin-lock-submit-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.admin-lock-spinner {
+  animation: adminLockRotate 1s linear infinite;
+}
+
+@keyframes adminLockRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .admin-lock-card {
+    padding: 30px 20px;
+    border-radius: 22px;
+  }
+
+  .admin-lock-pin-input {
+    height: 50px;
+    font-size: 20px;
+    border-radius: 10px;
+  }
+
+  .admin-lock-pin-grid {
+    gap: 6px;
+  }
+
+  .admin-lock-title {
+    font-size: 19px;
+  }
+
+  .admin-lock-subtitle {
+    font-size: 12.5px;
+  }
+}
