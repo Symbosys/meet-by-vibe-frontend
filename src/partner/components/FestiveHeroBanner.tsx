@@ -94,40 +94,22 @@ export const FestiveHeroBanner: React.FC<FestiveHeroBannerProps> = ({ events, on
 
           {/* Event Quick Meta if event item */}
           {banner.eventObj && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                marginTop: '10px',
-                flexWrap: 'wrap',
-                fontSize: '13px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#f8fafc' }}>
+            <div className="partner-hero-meta-row">
+              <div className="partner-hero-meta-item">
                 <MapPin size={14} color="#ff1379" />
                 <span>{banner.venueInfo}</span>
               </div>
-              <span style={{ color: 'rgba(255,255,255,0.4)' }}>•</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#fde047' }}>
-                <Calendar size={14} />
+              <span className="partner-hero-meta-divider">•</span>
+              <div className="partner-hero-meta-item">
+                <Calendar size={14} color="#fde047" />
                 <span>{banner.dateInfo}</span>
               </div>
-              <span style={{ color: 'rgba(255,255,255,0.4)' }}>•</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#f8fafc' }}>
+              <span className="partner-hero-meta-divider">•</span>
+              <div className="partner-hero-meta-item">
                 <Clock size={14} color="#38bdf8" />
                 <span>{banner.timeInfo}</span>
               </div>
-              <div
-                style={{
-                  background: 'rgba(16, 185, 129, 0.9)',
-                  padding: '3px 10px',
-                  borderRadius: '20px',
-                  fontWeight: 700,
-                  fontSize: '12px',
-                  color: '#ffffff',
-                }}
-              >
+              <div className="partner-hero-price-tag">
                 {banner.priceInfo}
               </div>
             </div>

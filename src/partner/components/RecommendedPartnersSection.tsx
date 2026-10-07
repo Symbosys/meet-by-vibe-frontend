@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, UserX } from 'lucide-react';
+import React, { useState } from 'react';
 import type { GarbaPartner } from '../types/partner.types';
 import { PartnerCard } from './PartnerCard';
 
