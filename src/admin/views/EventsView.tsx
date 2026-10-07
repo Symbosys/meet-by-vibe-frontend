@@ -185,9 +185,9 @@ export const EventsView: React.FC<EventsViewProps> = ({
         </div>
 
         {/* Filter and Search Bar */}
-        <div className="admin-filters-bar" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', padding: '16px', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+        <div className="admin-filters-bar">
           {/* Search */}
-          <div className="admin-search-wrapper" style={{ flex: '1 1 240px' }}>
+          <div className="admin-search-wrapper" style={{ flex: '1 1 200px' }}>
             <Search size={16} className="search-icon" />
             <input
               type="text"

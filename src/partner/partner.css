@@ -1376,63 +1376,308 @@
 
 
 /* ==========================================================================
-   RESPONSIVE DESIGN
+   COMPREHENSIVE RESPONSIVE DESIGN SYSTEM
    ========================================================================== */
-@media (max-width: 1080px) {
+
+/* Prevent horizontal scroll anywhere */
+html, body, #root, .partner-portal {
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* 1. Large Laptops / Tablets Landscape (1024px - 1280px) */
+@media (max-width: 1200px) {
+  .partner-container {
+    padding: 0 20px;
+  }
+  .partner-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .partner-footer-top {
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 24px;
+  }
+}
+
+/* 2. Tablets Portrait / Smaller Laptops (768px - 1024px) */
+@media (max-width: 1024px) {
+  .partner-navbar {
+    height: 68px;
+    gap: 12px;
+  }
+  .partner-nav-search {
+    max-width: 320px;
+  }
+  .partner-hero-banner {
+    height: 300px;
+  }
+  .partner-hero-title {
+    font-size: 26px;
+  }
   .partner-cards-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
   }
   .partner-stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .partner-footer-top {
     grid-template-columns: 1fr 1fr;
+    gap: 32px;
   }
 }
 
+/* 3. Mobile Landscape & Standard Mobile (480px - 768px) */
 @media (max-width: 768px) {
+  .partner-container {
+    padding: 0 16px;
+  }
+
+  /* Navbar Mobile Layout */
+  .partner-navbar-wrap {
+    padding: 4px 0;
+  }
+
   .partner-navbar {
     height: auto;
-    padding: 12px 0;
+    padding: 8px 0;
+    display: flex;
     flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    row-gap: 8px;
   }
+
+  .partner-brand {
+    order: 1;
+    gap: 8px;
+  }
+
+  .partner-brand-logo-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+  }
+
+  .partner-brand-logo-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .partner-brand-name {
+    font-size: 16.5px;
+  }
+
+  .partner-brand-tagline {
+    font-size: 9.5px;
+  }
+
+  .partner-nav-actions {
+    order: 2;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
   .partner-nav-search {
     order: 3;
-    max-width: 100%;
     width: 100%;
+    max-width: 100%;
+    margin-top: 4px;
   }
+
+  .partner-nav-search-input {
+    height: 38px;
+    font-size: 12.5px;
+    padding-left: 38px;
+  }
+
+  .partner-nav-search-icon {
+    left: 12px;
+  }
+
+  .partner-loc-pill {
+    height: 34px;
+    padding: 0 9px;
+    font-size: 11.5px;
+    max-width: 135px;
+    gap: 4px;
+  }
+
+  .partner-loc-pill span {
+    max-width: 75px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .partner-nav-gps-btn {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+  }
+
+  .partner-event-reg-btn {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 11.5px;
+    gap: 4px;
+  }
+
+  /* Hero Section */
+  .partner-hero-section {
+    padding-top: 14px;
+  }
+
   .partner-hero-banner {
     height: 240px;
+    border-radius: 16px;
   }
+
+  .partner-hero-overlay {
+    padding: 18px;
+  }
+
   .partner-hero-title {
-    font-size: 22px;
+    font-size: 20px;
+    margin-bottom: 4px;
   }
+
+  .partner-hero-subtitle {
+    font-size: 12.5px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Section Headers & Gender Filters */
+  .partner-section-header {
+    margin-top: 24px;
+    margin-bottom: 12px;
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 10px;
+  }
+
+  .partner-section-title {
+    font-size: 17px;
+  }
+
+  /* Partner Cards */
   .partner-cards-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
   }
-  .partner-stats-grid {
-    grid-template-columns: 1fr;
+
+  .partner-card-media {
+    height: 260px;
   }
-  .partner-event-card {
-    flex-direction: column;
+
+  /* Modals Responsive */
+  .partner-modal-overlay {
+    padding: 10px;
   }
-  .partner-event-img-wrap {
+
+  .partner-modal-card {
+    max-width: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 16px;
+    margin: 0;
+  }
+
+  .partner-modal-header {
+    padding: 14px 18px;
+  }
+
+  .partner-modal-body {
+    padding: 16px !important;
+  }
+
+  .partner-modal-footer {
+    padding: 12px 16px;
+    flex-direction: column-reverse;
+  }
+
+  .partner-modal-footer button {
     width: 100%;
-    height: 180px;
+    justify-content: center;
   }
-  .partner-event-actions {
-    margin-left: 0;
-    width: 100%;
-    margin-top: 14px;
-  }
-  .partner-event-actions button {
-    flex: 1;
-  }
+
+  /* Footer */
   .partner-footer-top {
     grid-template-columns: 1fr;
+    gap: 24px;
   }
+
   .partner-footer-bottom {
     flex-direction: column;
     text-align: center;
+    gap: 12px;
+  }
+}
+
+/* 4. Small Mobile Devices (< 480px / 320px - 440px) */
+@media (max-width: 480px) {
+  .partner-container {
+    padding: 0 12px;
+  }
+
+  .partner-brand-name {
+    font-size: 15px;
+  }
+
+  .partner-brand-tagline {
+    display: none;
+  }
+
+  .partner-loc-pill {
+    max-width: 110px;
+    padding: 0 7px;
+    font-size: 11px;
+  }
+
+  .partner-loc-pill span {
+    max-width: 55px;
+  }
+
+  .partner-loc-code {
+    display: none;
+  }
+
+  .partner-event-reg-btn {
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .partner-hero-banner {
+    height: 200px;
+    border-radius: 12px;
+  }
+
+  .partner-hero-overlay {
+    padding: 14px;
+  }
+
+  .partner-hero-title {
+    font-size: 17px;
+  }
+
+  .partner-hero-tag {
+    font-size: 10.5px;
+    padding: 4px 10px;
+  }
+
+  .partner-card-media {
+    height: 240px;
   }
 }

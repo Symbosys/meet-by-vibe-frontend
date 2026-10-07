@@ -668,7 +668,7 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+              <div className="ce-grid-2">
                 {/* Event Date */}
                 <div className="ce-form-group" style={{ margin: 0 }}>
                   <label className="ce-label">
@@ -701,7 +701,7 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div className="ce-grid-2 no-margin">
                 {/* Start Time */}
                 <div className="ce-form-group" style={{ margin: 0 }}>
                   <label className="ce-label">
@@ -799,7 +799,7 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
               </div>
 
               {/* Country, State, City, Pincode 4-Column Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1.2fr 1fr', gap: '12px', marginBottom: '14px' }}>
+              <div className="ce-grid-4">
                 {/* Country */}
                 <div className="ce-form-group" style={{ margin: 0 }}>
                   <label className="ce-label">Country *</label>
@@ -876,7 +876,7 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
               </div>
 
               {/* Latitude & Longitude */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="ce-grid-coords">
                 <div className="ce-form-group" style={{ margin: 0 }}>
                   <label className="ce-label" style={{ fontSize: '12px' }}>Latitude (Decimal)</label>
                   <input
@@ -915,7 +915,7 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+              <div className="ce-grid-3">
                 {/* Price Per Pass */}
                 <div className="ce-form-group" style={{ margin: 0 }}>
                   <label className="ce-label">Pass Price (₹)</label>
@@ -1008,7 +1008,7 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+              <div className="ce-grid-2">
                 <div className="ce-form-group" style={{ margin: 0 }}>
                   <label className="ce-label">Organizer Name (Optional)</label>
                   <input
