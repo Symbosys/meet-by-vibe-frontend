@@ -146,16 +146,6 @@ export const PartnerFooter: React.FC<PartnerFooterProps> = ({ selectedCity, onNa
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <span>© 2026 GarbaMitra. All rights reserved.</span>
-            
-            {/* Powered by Netlify Badge */}
-            <div className="netlify-badge">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2">
-                <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                <polyline points="2 17 12 22 22 17" />
-                <polyline points="2 12 12 17 22 12" />
-              </svg>
-              <span>Powered by Netlify</span>
-            </div>
           </div>
         </div>
       </div>
