@@ -17,6 +17,7 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
