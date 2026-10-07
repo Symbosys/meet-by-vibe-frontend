@@ -130,7 +130,7 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({
           </div>
         </div>
 
-        {/* Card Actions: Book Me Only */}
+        {/* Card Actions: Book Now */}
         <div className="partner-card-actions">
           <button
             className="btn-request-partner"
@@ -144,7 +144,7 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({
             }}
           >
             <Sparkles size={15} />
-            <span>Book Me</span>
+            <span>Book Now</span>
           </button>
         </div>
       </div>

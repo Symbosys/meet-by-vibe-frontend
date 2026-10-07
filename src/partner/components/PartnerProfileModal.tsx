@@ -32,74 +32,50 @@ export const PartnerProfileModal: React.FC<PartnerProfileModalProps> = ({
   return (
     <div className="partner-modal-overlay" onClick={onClose}>
       <div 
-        className="partner-modal-card" 
-        style={{ maxWidth: '600px' }} 
+        className="partner-modal-card profile-modal-card" 
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="partner-modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="partner-modal-header profile-modal-header">
+          <div className="profile-modal-title-wrap">
             <Sparkles size={18} color="#ff1379" />
-            <h3 className="partner-modal-title">Performer & Partner Profile</h3>
+            <h3 className="partner-modal-title profile-modal-title">Performer & Partner Profile</h3>
           </div>
           <button 
-            className="partner-round-arrow-btn" 
+            className="partner-round-arrow-btn profile-close-btn" 
             onClick={onClose}
+            aria-label="Close modal"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="partner-modal-body" style={{ padding: '20px' }}>
+        <div className="partner-modal-body profile-modal-body">
           {/* Main Photo Carousel */}
-          <div style={{ position: 'relative', height: '320px', borderRadius: '14px', overflow: 'hidden', marginBottom: '14px', background: '#0f172a' }}>
+          <div className="profile-carousel-container">
             <img
               src={photos[selectedPhotoIndex]}
               alt={partner.name}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              className="profile-carousel-img"
             />
 
             {/* Photo nav controls */}
             {photos.length > 1 && (
               <>
                 <button
+                  type="button"
                   onClick={() => setSelectedPhotoIndex((prev) => (prev === 0 ? photos.length - 1 : prev - 1))}
-                  style={{
-                    position: 'absolute',
-                    left: '10px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.85)',
-                    border: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer'
-                  }}
+                  className="profile-carousel-nav-btn prev"
+                  aria-label="Previous photo"
                 >
                   <ChevronLeft size={16} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setSelectedPhotoIndex((prev) => (prev === photos.length - 1 ? 0 : prev + 1))}
-                  style={{
-                    position: 'absolute',
-                    right: '10px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.85)',
-                    border: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer'
-                  }}
+                  className="profile-carousel-nav-btn next"
+                  aria-label="Next photo"
                 >
                   <ChevronRight size={16} />
                 </button>
@@ -107,55 +83,36 @@ export const PartnerProfileModal: React.FC<PartnerProfileModalProps> = ({
             )}
 
             {/* Match Badge */}
-            <div className="partner-match-badge" style={{ top: '12px', left: '12px' }}>
+            <div className="partner-match-badge profile-match-badge">
               <span>⚡</span>
               <span>{partner.matchScore}% Match Score</span>
             </div>
 
-            {/* Hourly Rate Float */}
-            <div style={{
-              position: 'absolute',
-              bottom: '12px',
-              right: '12px',
-              background: 'rgba(15, 23, 42, 0.85)',
-              backdropFilter: 'blur(8px)',
-              color: '#10b981',
-              fontWeight: 800,
-              padding: '6px 14px',
-              borderRadius: '20px',
-              fontSize: '14px',
-              border: '1px solid rgba(16, 185, 129, 0.4)'
-            }}>
-              ₹{partner.hourlyRate || 1200} / hr
+            {/* Rate Float Badge */}
+            <div className="profile-rate-badge">
+              ₹{partner.hourlyRate || 399}
             </div>
           </div>
 
-          {/* Thumbnails */}
+          {/* Thumbnails Strip */}
           {photos.length > 1 && (
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '4px' }}>
+            <div className="profile-thumbnails-row">
               {photos.map((p, idx) => (
                 <img
                   key={idx}
                   src={p}
-                  alt={`Thumb ${idx}`}
-                  style={{
-                    width: '54px',
-                    height: '54px',
-                    borderRadius: '8px',
-                    objectFit: 'cover',
-                    cursor: 'pointer',
-                    border: idx === selectedPhotoIndex ? '2px solid #ff1379' : '1px solid #e2e8f0'
-                  }}
+                  alt={`Thumb ${idx + 1}`}
+                  className={`profile-thumb-img ${idx === selectedPhotoIndex ? 'active' : ''}`}
                   onClick={() => setSelectedPhotoIndex(idx)}
                 />
               ))}
             </div>
           )}
 
-          {/* Details */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: '#0f172a' }}>
+          {/* Title & Badge Details */}
+          <div className="profile-header-details">
+            <div className="profile-name-verified-wrap">
+              <h2 className="profile-name-text">
                 {partner.name}, {partner.age}
               </h2>
               {partner.isVerified && (
@@ -168,17 +125,20 @@ export const PartnerProfileModal: React.FC<PartnerProfileModalProps> = ({
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: '16px', color: '#64748b', fontSize: '13px', marginBottom: '12px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ff1379', fontWeight: 600 }}>
+          {/* Meta Information Row */}
+          <div className="profile-meta-row">
+            <div className="profile-meta-item location">
               <MapPin size={14} />
               <span>{partner.city}, {partner.state}</span>
             </div>
-            <div>•</div>
-            <div>Height: <strong style={{ color: '#0f172a' }}>{partner.heightCm} cm</strong></div>
+            <span className="profile-meta-dot">•</span>
+            <div className="profile-meta-item">
+              <span>Height: <strong style={{ color: '#0f172a' }}>{partner.heightCm} cm</strong></span>
+            </div>
             {partner.instagram && (
               <>
-                <div>•</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ec4899' }}>
+                <span className="profile-meta-dot">•</span>
+                <div className="profile-meta-item instagram">
                   <span>📸 @{partner.instagram}</span>
                 </div>
               </>
@@ -186,55 +146,52 @@ export const PartnerProfileModal: React.FC<PartnerProfileModalProps> = ({
           </div>
 
           {/* Bio */}
-          <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', color: '#334155', lineHeight: 1.5, marginBottom: '14px' }}>
-            {partner.bio}
-          </div>
+          {partner.bio && (
+            <div className="profile-bio-box">
+              {partner.bio}
+            </div>
+          )}
 
-          {/* Dance Styles */}
-          <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>
-              Specialty Dance Styles
+          {/* Specialty Dance Styles */}
+          {partner.danceStyles && partner.danceStyles.length > 0 && (
+            <div className="profile-dance-section">
+              <div className="profile-section-label">
+                Specialty Dance Styles
+              </div>
+              <div className="profile-dance-pills-wrap">
+                {partner.danceStyles.map((style) => (
+                  <span
+                    key={style}
+                    className="profile-dance-pill"
+                  >
+                    {style}
+                  </span>
+                ))}
+              </div>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {partner.danceStyles.map((style) => (
-                <span
-                  key={style}
-                  style={{
-                    background: '#fff0f6',
-                    color: '#ff1379',
-                    fontSize: '11.5px',
-                    fontWeight: 700,
-                    padding: '4px 10px',
-                    borderRadius: '12px',
-                    border: '1px solid #ffd6e7'
-                  }}
-                >
-                  {style}
-                </span>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Footer with Book Me Action */}
-        <div className="partner-modal-footer">
+        <div className="partner-modal-footer profile-modal-footer">
           <button 
-            className="btn-partner-outline" 
+            type="button"
+            className="btn-partner-outline profile-btn-cancel" 
             onClick={onClose}
           >
             Cancel
           </button>
 
           <button 
-            className="btn-partner-primary"
-            style={{ background: 'linear-gradient(135deg, #ff1379 0%, #e11d48 100%)' }}
+            type="button"
+            className="btn-partner-primary profile-btn-book"
             onClick={() => {
               onClose();
               onBookPartner(partner);
             }}
           >
             <CreditCard size={15} />
-            <span>Book Me (₹{partner.hourlyRate || 1200}/hr)</span>
+            <span>Book Now</span>
           </button>
         </div>
       </div>
