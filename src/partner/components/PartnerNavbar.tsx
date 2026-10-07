@@ -1,13 +1,19 @@
 import { State } from 'country-state-city';
 import {
-  CalendarPlus,
-  ChevronDown,
-  Loader2,
-  LocateFixed,
-  MapPin,
-  Search
+    CalendarPlus,
+    ChevronDown,
+    ChevronRight,
+    Compass,
+    Loader2,
+    LocateFixed,
+    MapPin,
+    Menu,
+    Search,
+    Sparkles,
+    Users,
+    X
 } from 'lucide-react';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface PartnerNavbarProps {
@@ -37,6 +43,7 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
   onDetectLocation,
 }) => {
   const navigate = useNavigate();
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   // Dynamic State ISO Code from country-state-city
   const stateIsoCode = useMemo(() => {
@@ -58,12 +65,26 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
     return selectedCity || selectedState || 'Select Location';
   }, [selectedCity, selectedState]);
 
+  // Short location for compact mobile top bar (e.g. "Ranchi, JH")
+  const shortLocationText = useMemo(() => {
+    if (selectedCity) {
+      return stateIsoCode ? `${selectedCity}, ${stateIsoCode}` : selectedCity;
+    }
+    return selectedState || 'Location';
+  }, [selectedCity, selectedState, stateIsoCode]);
+
   return (
     <header className="partner-navbar-wrap">
       <div className="partner-container">
         <div className="partner-navbar">
-          {/* Logo & Brand */}
-          <div className="partner-brand" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          {/* 1. Left: Brand Logo & Title */}
+          <div
+            className="partner-brand"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setIsMobileDrawerOpen(false);
+            }}
+          >
             <div className="partner-brand-logo-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
@@ -80,7 +101,27 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
             </div>
           </div>
 
-          {/* Search Bar */}
+          {/* 2. Mobile Center Location Pill (Shown in place of search bar on mobile) */}
+          <div className="partner-mobile-loc-center">
+            <button
+              type="button"
+              className={`partner-loc-pill mobile-center-loc ${locationDetected ? 'live-location' : ''}`}
+              onClick={onOpenLocationModal}
+              title={isLocating ? 'Detecting location via Ola Maps...' : 'Tap to change city/state'}
+            >
+              {isLocating ? (
+                <Loader2 size={13} className="spin-animate" />
+              ) : (
+                <MapPin size={13} style={{ color: '#e11d48', flexShrink: 0 }} />
+              )}
+              <span className="loc-text-truncate">
+                {isLocating ? 'Locating...' : shortLocationText}
+              </span>
+              <ChevronDown size={12} style={{ opacity: 0.7, flexShrink: 0 }} />
+            </button>
+          </div>
+
+          {/* 3. Desktop Center Search Bar (Hidden on Mobile) */}
           <div className="partner-nav-search">
             <Search size={16} className="partner-nav-search-icon" />
             <input
@@ -92,7 +133,7 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
             />
           </div>
 
-          {/* Nav Actions - Right side of Search Bar: Fetched Current Location */}
+          {/* 4. Desktop Right Actions (Hidden on Mobile) */}
           <div className="partner-nav-actions">
             {/* Unified Fetched Location Field */}
             <button
@@ -147,8 +188,151 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
               <span>Event Register</span>
             </button>
           </div>
+
+          {/* 5. Mobile 3-Line Hamburger Menu Icon (On the Right) */}
+          <button
+            type="button"
+            className="partner-mobile-menu-btn"
+            onClick={() => setIsMobileDrawerOpen(true)}
+            aria-label="Open Navigation Menu"
+            title="Menu"
+          >
+            <Menu size={20} color="var(--gm-primary)" />
+          </button>
         </div>
       </div>
+
+      {/* Right-Side Slide-in Sidebar Drawer */}
+      {isMobileDrawerOpen && (
+        <>
+          <div
+            className="partner-mobile-drawer-backdrop"
+            onClick={() => setIsMobileDrawerOpen(false)}
+          />
+          <aside className="partner-mobile-menu-drawer">
+            {/* Sidebar Header */}
+            <div className="partner-mobile-drawer-header">
+              <div className="partner-drawer-brand">
+                <div className="partner-brand-logo-icon" style={{ width: '28px', height: '28px' }}>
+                  <Sparkles size={16} color="#ffffff" />
+                </div>
+                <span style={{ fontWeight: 800, fontSize: '15px', color: '#1e1b4b' }}>
+                  MeetBy<span style={{ color: 'var(--gm-primary)' }}>Vibe</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                className="partner-mobile-drawer-close"
+                onClick={() => setIsMobileDrawerOpen(false)}
+                title="Close sidebar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Sidebar Body */}
+            <div className="partner-mobile-drawer-body">
+              {/* Search Bar in Sidebar */}
+              <div className="partner-drawer-search-wrap">
+                <Search size={15} className="partner-drawer-search-icon" />
+                <input
+                  type="text"
+                  className="partner-drawer-search-input"
+                  placeholder="Search events, performers..."
+                  value={searchQuery}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                />
+              </div>
+
+              <div className="partner-drawer-section-lbl">LOCATION & GPS</div>
+
+              {/* 1. Location Selector Tile */}
+              <div
+                className="partner-mobile-menu-item"
+                onClick={() => {
+                  setIsMobileDrawerOpen(false);
+                  onOpenLocationModal();
+                }}
+              >
+                <div className="partner-menu-item-icon icon-rose">
+                  <MapPin size={18} />
+                </div>
+                <div className="partner-menu-item-text">
+                  <span className="partner-menu-label">Current Location</span>
+                  <strong className="partner-menu-val">{locationDisplayText}</strong>
+                </div>
+                <ChevronRight size={16} className="partner-menu-arrow" />
+              </div>
+
+              {/* 2. GPS Auto-Detect via Ola Maps Tile */}
+              {onDetectLocation && (
+                <div
+                  className="partner-mobile-menu-item"
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    onDetectLocation();
+                  }}
+                >
+                  <div className="partner-menu-item-icon icon-blue">
+                    {isLocating ? <Loader2 size={18} className="spin-animate" /> : <LocateFixed size={18} />}
+                  </div>
+                  <div className="partner-menu-item-text">
+                    <span className="partner-menu-label">GPS Auto-Detect</span>
+                    <strong className="partner-menu-val">
+                      {isLocating ? 'Detecting via Ola Maps...' : 'Fetch Live GPS Location'}
+                    </strong>
+                  </div>
+                  <ChevronRight size={16} className="partner-menu-arrow" />
+                </div>
+              )}
+
+              <div className="partner-drawer-section-lbl">QUICK ACTIONS</div>
+
+              {/* 3. Event Register Primary CTA */}
+              <button
+                type="button"
+                className="partner-mobile-menu-cta"
+                onClick={() => {
+                  setIsMobileDrawerOpen(false);
+                  if (onRegisterEvent) {
+                    onRegisterEvent();
+                  } else {
+                    navigate('/create-event');
+                  }
+                }}
+              >
+                <CalendarPlus size={18} />
+                <span>Create & Register Garba Event</span>
+              </button>
+
+              {/* 4. Quick Links */}
+              <div className="partner-drawer-links-group">
+                <div
+                  className="partner-drawer-quick-link"
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  <Compass size={16} color="var(--gm-primary)" />
+                  <span>Garba Events Carousel</span>
+                </div>
+                <div
+                  className="partner-drawer-quick-link"
+                  onClick={() => {
+                    setIsMobileDrawerOpen(false);
+                    const el = document.getElementById('partners-section');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  <Users size={16} color="#0284c7" />
+                  <span>Find Garba Partners</span>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </>
+      )}
     </header>
   );
 };

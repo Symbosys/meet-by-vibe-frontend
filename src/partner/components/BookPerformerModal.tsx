@@ -9,7 +9,6 @@ import {
   CreditCard,
   FileCheck2,
   Image as ImageIcon,
-  Link as LinkIcon,
   Loader2,
   MapPin,
   ShieldCheck,
@@ -33,16 +32,6 @@ interface BookPerformerModalProps {
   onClose: () => void;
   onBookingComplete?: (bookingData: any) => void;
 }
-
-// Preset Festive Garba Client Avatars
-const CLIENT_AVATAR_PRESETS = [
-  { id: 'f1', label: 'Festive Female 1', gender: 'FEMALE', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80' },
-  { id: 'f2', label: 'Festive Female 2', gender: 'FEMALE', url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80' },
-  { id: 'f3', label: 'Festive Female 3', gender: 'FEMALE', url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=400&q=80' },
-  { id: 'm1', label: 'Festive Male 1', gender: 'MALE', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80' },
-  { id: 'm2', label: 'Festive Male 2', gender: 'MALE', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80' },
-  { id: 'm3', label: 'Festive Male 3', gender: 'MALE', url: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=400&q=80' }
-];
 
 export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   partner,
@@ -71,8 +60,6 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isCompressingAvatar, setIsCompressingAvatar] = useState<boolean>(false);
   const [compressedSizeKB, setCompressedSizeKB] = useState<number | null>(null);
-  const [showUrlInput, setShowUrlInput] = useState<boolean>(false);
-  const [customUrl, setCustomUrl] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Payment Proof Screenshot Dynamic State with <= 100 KB auto-compression
@@ -92,10 +79,8 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const [city, setCity] = useState(partner?.city || 'Ahmedabad');
   const [notes, setNotes] = useState('Looking for synchronized couple round and Dodhiya steps choreography.');
 
-  // Financials
-  const hourlyRate = partner?.hourlyRate || 1200;
-  const totalAmount = hourlyRate * durationHours;
-  const advanceAmount = Math.round(totalAmount * 0.5); // 50% advance
+  // Fixed Booking Fee
+  const bookingFee = 399;
 
   // Payment state
   const [createdBookingId, setCreatedBookingId] = useState<string>('');
@@ -120,7 +105,6 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       setProofPreviewUrl('');
       setProofCompressedSizeKB(null);
       setProofOriginalSizeKB(null);
-      setShowUrlInput(false);
       if (partner) {
         setCity(partner.city);
       }
@@ -185,8 +169,6 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   // Reset or Remove Photo
   const handleRemovePhoto = () => {
     setAvatarFile(null);
-    setShowUrlInput(false);
-    setCustomUrl('');
     setCompressedSizeKB(null);
     setAvatarUrl(
       gender === 'MALE'
@@ -198,36 +180,14 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
     }
   };
 
-  // Switch gender and auto-select matching default festive avatar if user hasn't uploaded a custom photo
+  // Switch gender and auto-select matching default festive avatar
   const handleGenderChange = (newGender: Gender) => {
     setGender(newGender);
-    if (!avatarFile && !customUrl) {
+    if (!avatarFile) {
       if (newGender === 'MALE') {
         setAvatarUrl('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80');
       } else if (newGender === 'FEMALE') {
         setAvatarUrl('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80');
-      }
-    }
-  };
-
-  const handleApplyCustomUrl = async () => {
-    if (customUrl.trim()) {
-      try {
-        setIsCompressingAvatar(true);
-        // Compress external URL image as well if applicable
-        const compressed = await compressImage(customUrl.trim(), 'client-photo.jpg', {
-          maxSizeKB: 95,
-          maxWidthOrHeight: 800
-        });
-        setAvatarUrl(compressed.dataUrl);
-        setAvatarFile(compressed.file);
-        setCompressedSizeKB(compressed.sizeKB);
-      } catch {
-        setAvatarUrl(customUrl.trim());
-        setAvatarFile(null);
-        setCompressedSizeKB(null);
-      } finally {
-        setIsCompressingAvatar(false);
       }
     }
   };
@@ -280,7 +240,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   // Dynamic active QR & UPI ID from backend qr.routes / activeQR or performer fallback
   const upiId = activeQR?.upiId || partner.upiId || 'meetbyvibe@ybl';
   const payeeName = activeQR?.accountHolderName || activeQR?.title || partner.name || 'Meet By Vibe UPI';
-  const fallbackUpiPayload = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${advanceAmount}&tn=${encodeURIComponent(`Booking ${bookingCode || 'GARBA'}`)}&cu=INR`;
+  const fallbackUpiPayload = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${bookingFee}&tn=${encodeURIComponent(`Booking ${bookingCode || 'GARBA'}`)}&cu=INR`;
   
   // Prioritize the actual QR code uploaded by the admin
   const qrCodeUrl = activeQR?.imageUrl || dynamicQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(dynamicUpiPayload || fallbackUpiPayload)}`;
@@ -380,9 +340,8 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
         eventAddress,
         city,
         notes,
-        hourlyRate,
-        totalAmount,
-        advanceAmount,
+        totalAmount: bookingFee,
+        advanceAmount: bookingFee,
         utrNumber,
         screenshotUrl: proofPreviewUrl,
         status: 'PAYMENT_VERIFIED',
@@ -411,78 +370,70 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   return (
     <div className="partner-modal-overlay" onClick={onClose}>
       <div 
-        className="partner-modal-card" 
-        style={{ maxWidth: '640px', background: '#ffffff', color: '#0f172a' }} 
+        className="partner-modal-card book-modal-card" 
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="partner-modal-header" style={{ background: '#fdf2f8' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="partner-modal-header book-modal-header">
+          <div className="book-modal-title-wrap">
             <Sparkles size={18} color="#ff1379" />
-            <h3 className="partner-modal-title" style={{ color: '#0f172a', fontWeight: 800 }}>
+            <h3 className="partner-modal-title book-modal-title">
               {step === 'form' && `Book Performer: ${partner.name}`}
               {step === 'payment' && `UPI Payment & Slot Confirmation`}
               {step === 'success' && `Booking Successfully Confirmed!`}
             </h3>
           </div>
-          <button className="partner-round-arrow-btn" onClick={onClose}>
+          <button className="partner-round-arrow-btn" onClick={onClose} aria-label="Close modal">
             <X size={16} />
           </button>
         </div>
 
         {/* STEP 1: Full Booking Form matching Prisma Model */}
         {step === 'form' && (
-          <form onSubmit={handleProceedToPayment}>
-            <div className="partner-modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+          <form onSubmit={handleProceedToPayment} className="book-modal-form">
+            <div className="partner-modal-body book-modal-body">
               {errorMsg && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '10px 14px', borderRadius: '8px', color: '#ef4444', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px' }}>
+                <div className="book-error-alert">
                   <AlertCircle size={15} />
                   <span>{errorMsg}</span>
                 </div>
               )}
 
               {/* Performer Summary Strip */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="book-performer-summary">
+                <div className="book-performer-left">
                   <img
                     src={partner.avatarUrl}
                     alt={partner.name}
-                    style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #ff1379' }}
+                    className="book-performer-avatar"
                   />
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: '15px', color: '#0f172a' }}>
+                  <div className="book-performer-info">
+                    <div className="book-performer-name">
                       {partner.name}, {partner.age}
                     </div>
-                    <div style={{ fontSize: '11.5px', color: '#64748b' }}>
+                    <div className="book-performer-sub">
                       📍 {partner.city} • ⚡ {partner.matchScore}% Match • 👑 {partner.mySkill}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>Hourly Rate</div>
-                  <div style={{ fontSize: '17px', fontWeight: 800, color: '#ff1379' }}>
-                    ₹{hourlyRate}/hr
+                <div className="book-performer-rate">
+                  <div className="book-rate-label">Booking Fee</div>
+                  <div className="book-rate-value">
+                    ₹{bookingFee}
                   </div>
                 </div>
               </div>
 
               {/* 1. Booker / Client Details */}
-              <div style={{ marginBottom: '18px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="book-section-group">
+                <div className="book-section-label">
                   <User size={14} color="#ff1379" />
                   <span>1. Client Contact & Personal Details</span>
                 </div>
 
                 {/* DYNAMIC CLIENT PROFILE PICTURE UPLOADER (Strictly <= 100 KB) */}
-                <div style={{
-                  background: 'linear-gradient(135deg, #fff5f9 0%, #ffffff 100%)',
-                  borderRadius: '12px',
-                  border: '1.5px solid #ffd6e7',
-                  padding: '14px',
-                  marginBottom: '14px',
-                  boxShadow: '0 2px 8px rgba(255, 19, 121, 0.05)'
-                }}>
+                <div className="book-avatar-uploader-card">
                   {/* Hidden File Input */}
                   <input
                     type="file"
@@ -492,86 +443,43 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                     style={{ display: 'none' }}
                   />
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                  <div className="book-avatar-uploader-inner">
                     {/* Avatar Preview Box with Camera Badge & Compression Indicator */}
                     <div 
-                      style={{ position: 'relative', cursor: 'pointer' }}
+                      className="book-avatar-preview-wrap"
                       onClick={() => !isCompressingAvatar && fileInputRef.current?.click()}
                       title="Click to change profile picture"
                     >
                       <img
                         src={avatarUrl}
                         alt="Client Profile"
-                        style={{
-                          width: '68px',
-                          height: '68px',
-                          borderRadius: '50%',
-                          objectFit: 'cover',
-                          border: '2.5px solid #ff1379',
-                          boxShadow: '0 4px 12px rgba(255, 19, 121, 0.2)',
-                          display: 'block',
-                          opacity: isCompressingAvatar ? 0.5 : 1
-                        }}
+                        className="book-avatar-preview-img"
+                        style={{ opacity: isCompressingAvatar ? 0.5 : 1 }}
                       />
-                      <div style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        right: 0,
-                        background: '#ff1379',
-                        color: '#ffffff',
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '2px solid #ffffff',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
-                      }}>
+                      <div className="book-avatar-camera-badge">
                         {isCompressingAvatar ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
                       </div>
                     </div>
 
                     {/* Actions and Info */}
-                    <div style={{ flex: 1, minWidth: '220px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a' }}>
+                    <div className="book-avatar-actions-wrap">
+                      <div className="book-avatar-header-row">
+                        <div className="book-avatar-title-wrap">
+                          <span className="book-avatar-title">
                             Client Profile Photo / Selfie
                           </span>
                           {compressedSizeKB !== null && (
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                              background: '#ecfdf5',
-                              color: '#059669',
-                              fontSize: '10.5px',
-                              fontWeight: 700,
-                              padding: '1px 6px',
-                              borderRadius: '10px',
-                              border: '1px solid #a7f3d0'
-                            }}>
+                            <span className="book-badge-compressed">
                               <ShieldCheck size={11} />
                               <span>{compressedSizeKB} KB (Optimized)</span>
                             </span>
                           )}
                         </div>
-                        {(avatarFile || customUrl) && (
+                        {avatarFile && (
                           <button
                             type="button"
                             onClick={handleRemovePhoto}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: '#ef4444',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '3px'
-                            }}
+                            className="book-btn-reset-photo"
                           >
                             <Trash2 size={12} />
                             <span>Reset</span>
@@ -579,25 +487,12 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                         )}
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                      <div className="book-avatar-btn-row">
                         <button
                           type="button"
                           disabled={isCompressingAvatar}
                           onClick={() => fileInputRef.current?.click()}
-                          style={{
-                            padding: '5px 12px',
-                            background: '#ff1379',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '11.5px',
-                            fontWeight: 700,
-                            cursor: isCompressingAvatar ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            boxShadow: '0 2px 6px rgba(255, 19, 121, 0.25)'
-                          }}
+                          className="book-btn-upload"
                         >
                           {isCompressingAvatar ? (
                             <>
@@ -612,139 +507,36 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                           )}
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() => setShowUrlInput(!showUrlInput)}
-                          style={{
-                            padding: '5px 10px',
-                            background: '#ffffff',
-                            color: '#475569',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '6px',
-                            fontSize: '11.5px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <LinkIcon size={12} />
-                          <span>{showUrlInput ? 'Hide URL' : 'Image URL'}</span>
-                        </button>
-
-                        <span style={{ fontSize: '10.5px', color: '#64748b' }}>
-                          ⚡ Auto-compressed to &lt;100 KB
+                        <span className="book-compression-note">
+                          ⚡ Auto-compressed &lt;100 KB
                         </span>
-                      </div>
-
-                      {/* Quick Festive Presets */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>Presets:</span>
-                        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '2px 0' }}>
-                          {CLIENT_AVATAR_PRESETS.map((preset) => {
-                            const isSelected = avatarUrl === preset.url;
-                            return (
-                              <button
-                                key={preset.id}
-                                type="button"
-                                onClick={() => {
-                                  setAvatarUrl(preset.url);
-                                  setAvatarFile(null);
-                                  setCustomUrl('');
-                                  setCompressedSizeKB(null);
-                                }}
-                                title={preset.label}
-                                style={{
-                                  border: isSelected ? '2px solid #ff1379' : '1px solid #cbd5e1',
-                                  borderRadius: '50%',
-                                  padding: '1px',
-                                  background: isSelected ? '#ff1379' : '#ffffff',
-                                  cursor: 'pointer',
-                                  lineHeight: 0,
-                                  transform: isSelected ? 'scale(1.1)' : 'scale(1)',
-                                  transition: 'all 0.15s ease'
-                                }}
-                              >
-                                <img
-                                  src={preset.url}
-                                  alt={preset.label}
-                                  style={{
-                                    width: '24px',
-                                    height: '24px',
-                                    borderRadius: '50%',
-                                    objectFit: 'cover'
-                                  }}
-                                />
-                              </button>
-                            );
-                          })}
-                        </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Custom URL Input Box (collapsible) */}
-                  {showUrlInput && (
-                    <div style={{ marginTop: '10px', display: 'flex', gap: '6px' }}>
-                      <input
-                        type="url"
-                        placeholder="https://example.com/my-festive-photo.jpg"
-                        value={customUrl}
-                        onChange={(e) => setCustomUrl(e.target.value)}
-                        style={{
-                          flex: 1,
-                          height: '34px',
-                          borderRadius: '6px',
-                          border: '1.5px solid #cbd5e1',
-                          padding: '0 10px',
-                          fontSize: '12px',
-                          background: '#ffffff',
-                          color: '#0f172a'
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleApplyCustomUrl}
-                        style={{
-                          padding: '0 12px',
-                          background: '#0f172a',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  )}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                <div className="book-form-grid-2">
+                  <div className="book-field">
+                    <label className="book-label">
                       Full Name *
                     </label>
                     <input
                       type="text"
-                      style={{ width: '100%', height: '40px', padding: '0 12px', background: '#ffffff', color: '#0f172a', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', fontWeight: 600 }}
+                      className="book-input"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  <div className="book-field">
+                    <label className="book-label">
                       Gender *
                     </label>
                     <select
                       value={gender}
                       onChange={(e) => handleGenderChange(e.target.value as Gender)}
-                      style={{ width: '100%', height: '40px', padding: '0 10px', background: '#ffffff', color: '#0f172a', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', fontWeight: 600 }}
+                      className="book-select"
                     >
                       <option value="FEMALE">Female</option>
                       <option value="MALE">Male</option>
@@ -753,27 +545,27 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                <div className="book-form-grid-2">
+                  <div className="book-field">
+                    <label className="book-label">
                       Email Address *
                     </label>
                     <input
                       type="email"
-                      style={{ width: '100%', height: '40px', padding: '0 12px', background: '#ffffff', color: '#0f172a', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', fontWeight: 600 }}
+                      className="book-input"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  <div className="book-field">
+                    <label className="book-label">
                       Contact Phone *
                     </label>
                     <input
                       type="text"
-                      style={{ width: '100%', height: '40px', padding: '0 12px', background: '#ffffff', color: '#0f172a', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', fontWeight: 600 }}
+                      className="book-input"
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
@@ -781,13 +573,13 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                <div className="book-field">
+                  <label className="book-label">
                     Client Billing / Residential Address *
                   </label>
                   <input
                     type="text"
-                    style={{ width: '100%', height: '40px', padding: '0 12px', background: '#ffffff', color: '#0f172a', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', fontWeight: 600 }}
+                    className="book-input"
                     required
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
@@ -796,85 +588,49 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
               </div>
 
               {/* 2. Slot Timings */}
-              <div style={{ marginBottom: '18px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="book-section-group">
+                <div className="book-section-label">
                   <Clock size={14} color="#ff1379" />
                   <span>2. Slot Timings & Duration</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                <div className="book-form-grid-3">
+                  <div className="book-field">
+                    <label className="book-label">
                       <Calendar size={12} color="#ff1379" />
                       <span>Booking Date *</span>
                     </label>
                     <input
                       type="date"
-                      style={{ 
-                        width: '100%', 
-                        height: '40px', 
-                        padding: '0 10px', 
-                        background: '#ffffff', 
-                        color: '#0f172a', 
-                        border: '1.5px solid #cbd5e1', 
-                        borderRadius: '8px', 
-                        fontSize: '13.5px', 
-                        fontWeight: 700,
-                        colorScheme: 'light',
-                        outline: 'none'
-                      }}
+                      className="book-input"
                       required
                       value={bookingDate}
                       onChange={(e) => setBookingDate(e.target.value)}
                     />
                   </div>
 
-                  <div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  <div className="book-field">
+                    <label className="book-label">
                       <Clock size={12} color="#ff1379" />
                       <span>Start Time *</span>
                     </label>
                     <input
                       type="time"
-                      style={{ 
-                        width: '100%', 
-                        height: '40px', 
-                        padding: '0 10px', 
-                        background: '#ffffff', 
-                        color: '#0f172a', 
-                        border: '1.5px solid #cbd5e1', 
-                        borderRadius: '8px', 
-                        fontSize: '13.5px', 
-                        fontWeight: 700,
-                        colorScheme: 'light',
-                        outline: 'none'
-                      }}
+                      className="book-input"
                       required
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
                     />
                   </div>
 
-                  <div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  <div className="book-field">
+                    <label className="book-label">
                       <Clock size={12} color="#ff1379" />
                       <span>End Time *</span>
                     </label>
                     <input
                       type="time"
-                      style={{ 
-                        width: '100%', 
-                        height: '40px', 
-                        padding: '0 10px', 
-                        background: '#ffffff', 
-                        color: '#0f172a', 
-                        border: '1.5px solid #cbd5e1', 
-                        borderRadius: '8px', 
-                        fontSize: '13.5px', 
-                        fontWeight: 700,
-                        colorScheme: 'light',
-                        outline: 'none'
-                      }}
+                      className="book-input"
                       required
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
@@ -884,40 +640,40 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
               </div>
 
               {/* 3. Event Venue Location & Notes */}
-              <div style={{ marginBottom: '18px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="book-section-group">
+                <div className="book-section-label">
                   <MapPin size={14} color="#ff1379" />
                   <span>3. Event Location & Custom Notes</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                <div className="book-form-grid-venue">
+                  <div className="book-field">
+                    <label className="book-label">
                       Event Ground / Venue Address
                     </label>
                     <input
                       type="text"
-                      style={{ width: '100%', height: '40px', padding: '0 12px', background: '#ffffff', color: '#0f172a', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', fontWeight: 600 }}
+                      className="book-input"
                       value={eventAddress}
                       onChange={(e) => setEventAddress(e.target.value)}
                     />
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  <div className="book-field">
+                    <label className="book-label">
                       City
                     </label>
                     <input
                       type="text"
-                      style={{ width: '100%', height: '40px', padding: '0 12px', background: '#ffffff', color: '#0f172a', border: '1.5px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', fontWeight: 600 }}
+                      className="book-input"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                <div className="book-field">
+                  <label className="book-label">
                     Special Instructions / Notes
                   </label>
                   <textarea
@@ -925,40 +681,24 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                     placeholder="Enter dance style preferences, choreography requests, costume synchronization details..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    style={{ 
-                      width: '100%', 
-                      borderRadius: '8px', 
-                      border: '1.5px solid #cbd5e1', 
-                      padding: '10px 12px', 
-                      fontSize: '13px', 
-                      fontWeight: 600,
-                      background: '#ffffff', 
-                      color: '#0f172a', 
-                      resize: 'none',
-                      fontFamily: 'inherit',
-                      outline: 'none'
-                    }}
+                    className="book-textarea"
                   />
                 </div>
               </div>
 
-              {/* 4. Financial Breakdown Strip */}
-              <div style={{ background: '#fff0f6', padding: '14px 16px', borderRadius: '12px', border: '1px solid #ffd6e7' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: '#64748b', marginBottom: '4px' }}>
-                  <span>Duration ({durationHours} hours @ ₹{hourlyRate}/hr):</span>
-                  <strong style={{ color: '#0f172a' }}>₹{totalAmount}</strong>
+              {/* 4. Financial Breakdown Strip with Fixed Fee 399 */}
+              <div className="book-finance-strip">
+                <div className="book-finance-row">
+                  <span>Performer Booking Fee:</span>
+                  <strong className="book-finance-advance">₹{bookingFee}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: '#64748b', marginBottom: '8px' }}>
-                  <span>50% Advance Lock Amount:</span>
-                  <strong style={{ color: '#ff1379', fontSize: '14px' }}>₹{advanceAmount}</strong>
-                </div>
-                <div style={{ borderTop: '1px dashed #ffd6e7', paddingTop: '6px', fontSize: '11px', color: '#be185d' }}>
-                  🔒 Anti-collision lock ensures your performer is reserved exclusively for this time slot.
+                <div className="book-finance-note">
+                  🔒 Fixed one-time booking fee. Performer is reserved exclusively for your selected date & time slot.
                 </div>
               </div>
             </div>
 
-            <div className="partner-modal-footer">
+            <div className="partner-modal-footer book-modal-footer">
               <button type="button" className="btn-partner-outline" onClick={onClose} disabled={initiateBooking.isPending}>
                 Cancel
               </button>
@@ -971,7 +711,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                 ) : (
                   <>
                     <CreditCard size={15} />
-                    <span>Proceed to QR Payment (₹{advanceAmount})</span>
+                    <span>Proceed to QR Payment (₹{bookingFee})</span>
                   </>
                 )}
               </button>
@@ -981,103 +721,72 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
 
         {/* STEP 2: Dynamic UPI QR Code Payment & Screenshot Upload */}
         {step === 'payment' && (
-          <form onSubmit={handleConfirmPayment}>
-            <div className="partner-modal-body" style={{ textAlign: 'center', maxHeight: '72vh', overflowY: 'auto' }}>
+          <form onSubmit={handleConfirmPayment} className="book-modal-form">
+            <div className="partner-modal-body book-modal-body text-center">
               {errorMsg && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '8px 12px', borderRadius: '8px', color: '#ef4444', fontSize: '12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div className="book-error-alert">
                   <AlertCircle size={14} />
                   <span>{errorMsg}</span>
                 </div>
               )}
 
               {/* Countdown & Booking Code & Client Tag */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', background: '#f8fafc', padding: '8px 14px', borderRadius: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#64748b' }}>
+              <div className="book-payment-status-strip">
+                <div className="book-payment-client-tag">
                   <img
                     src={avatarUrl}
                     alt={name}
-                    style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #ff1379' }}
+                    className="book-payment-client-avatar"
                   />
                   <span>Booking ID: <strong style={{ color: '#0f172a' }}>{bookingCode}</strong></span>
                 </div>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div className="book-payment-countdown">
                   <Clock size={14} />
-                  <span>Slot Lock Expires in: {formatTimer(timeLeftSeconds)}</span>
+                  <span>Expires in: {formatTimer(timeLeftSeconds)}</span>
                 </div>
               </div>
 
               {/* Admin-Uploaded Active QR Branding Badge */}
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: '#ffffff',
-                border: '1.5px solid #ff1379',
-                padding: '4px 12px',
-                borderRadius: '20px',
-                marginBottom: '10px',
-                boxShadow: '0 2px 8px rgba(255, 19, 121, 0.08)'
-              }}>
-                <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a' }}>
+              <div className="book-qr-branding-badge">
+                <span className="book-qr-title">
                   {activeQR?.title || payeeName}
                 </span>
                 {activeQR?.bankName && (
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '10px',
-                    background: '#ecfdf5',
-                    color: '#059669',
-                    border: '1px solid #a7f3d0'
-                  }}>
+                  <span className="book-qr-bank-tag">
                     {activeQR.bankName}
                   </span>
                 )}
               </div>
 
               {/* Dynamic QR Image (Live Admin Uploaded QR Code) */}
-              <div style={{
-                width: '210px',
-                height: '210px',
-                margin: '0 auto 12px auto',
-                padding: '10px',
-                background: '#ffffff',
-                borderRadius: '16px',
-                border: '2px solid #ff1379',
-                boxShadow: '0 8px 24px rgba(255, 19, 121, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative'
-              }}>
+              <div className="book-qr-code-box">
                 <img
                   src={qrCodeUrl}
                   alt={activeQR?.title || "UPI Payment QR Code"}
-                  style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'contain' }}
+                  className="book-qr-img"
                 />
               </div>
 
               {/* Payee Info & Copy UPI */}
-              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
-                Scan to Pay ₹{advanceAmount} via {activeQR?.bankName || 'GPay / PhonePe / Paytm'}
+              <div className="book-pay-amount-heading">
+                Scan to Pay ₹{bookingFee} via {activeQR?.bankName || 'GPay / PhonePe / Paytm'}
               </div>
 
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#f1f5f9', padding: '6px 14px', borderRadius: '20px', fontSize: '12.5px', color: '#334155', marginBottom: '14px' }}>
-                <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{upiId}</span>
+              <div className="book-upi-pill">
+                <span className="book-upi-text">{upiId}</span>
                 <button
                   type="button"
                   onClick={handleCopyUpi}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff1379', display: 'flex', alignItems: 'center' }}
+                  className="book-copy-btn"
                   title="Copy UPI ID"
                 >
-                  {copiedUpi ? <Check size={14} /> : <Copy size={14} />}
+                  {copiedUpi ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
                 </button>
               </div>
 
               {/* UTR Number Input */}
-              <div style={{ textAlign: 'left', background: '#f8fafc', padding: '12px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>
+              <div className="book-utr-card">
+                <label className="book-label" style={{ color: '#0f172a' }}>
                   Enter 12-Digit Bank UTR / Transaction Reference ID *
                 </label>
                 <input
@@ -1086,55 +795,25 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                   required
                   value={utrNumber}
                   onChange={(e) => setUtrNumber(e.target.value)}
-                  style={{
-                    width: '100%',
-                    height: '40px',
-                    borderRadius: '8px',
-                    border: '1.5px solid #cbd5e1',
-                    padding: '0 12px',
-                    fontSize: '13.5px',
-                    fontFamily: 'monospace',
-                    fontWeight: 800,
-                    color: '#0f172a',
-                    outline: 'none',
-                    background: '#ffffff'
-                  }}
+                  className="book-utr-input"
                 />
-                <span style={{ fontSize: '10.5px', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                <span className="book-utr-helper">
                   Found on your payment app receipt after completing payment.
                 </span>
               </div>
 
               {/* PAYMENT SCREENSHOT UPLOAD FIELD (Strictly Compressed to <= 100 KB) */}
-              <div style={{
-                textAlign: 'left',
-                background: 'linear-gradient(135deg, #fdf4ff 0%, #ffffff 100%)',
-                padding: '14px',
-                borderRadius: '12px',
-                border: '1.5px solid #f0abfc',
-                boxShadow: '0 2px 8px rgba(217, 70, 239, 0.05)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="book-proof-card">
+                <div className="book-proof-header">
+                  <div className="book-proof-title-wrap">
                     <ImageIcon size={15} color="#c026d3" />
-                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>
-                      Payment Proof Screenshot (Optional but Recommended)
+                    <span className="book-proof-title">
+                      Payment Proof Screenshot (Optional)
                     </span>
                   </div>
 
                   {proofCompressedSizeKB !== null && (
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      background: '#ecfdf5',
-                      color: '#059669',
-                      fontSize: '10.5px',
-                      fontWeight: 700,
-                      padding: '2px 8px',
-                      borderRadius: '12px',
-                      border: '1px solid #a7f3d0'
-                    }}>
+                    <span className="book-badge-compressed">
                       <ShieldCheck size={12} />
                       <span>{proofCompressedSizeKB} KB (&lt;100KB Safe)</span>
                     </span>
@@ -1152,104 +831,61 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                 {!proofPreviewUrl ? (
                   <div
                     onClick={() => !isCompressingProof && proofFileInputRef.current?.click()}
-                    style={{
-                      border: '1.5px dashed #d8b4fe',
-                      borderRadius: '8px',
-                      padding: '14px',
-                      textAlign: 'center',
-                      cursor: isCompressingProof ? 'not-allowed' : 'pointer',
-                      background: '#ffffff',
-                      transition: 'all 0.2s ease',
-                    }}
+                    className="book-proof-dropzone"
                   >
                     {isCompressingProof ? (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#9333ea', fontSize: '12px', fontWeight: 700 }}>
+                      <div className="book-proof-compressing-state">
                         <Loader2 size={16} className="animate-spin" />
                         <span>Compressing screenshot to &lt; 100 KB...</span>
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#fae8ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c026d3' }}>
+                      <div className="book-proof-idle-state">
+                        <div className="book-proof-upload-icon">
                           <Upload size={16} />
                         </div>
-                        <div style={{ textAlign: 'left' }}>
-                          <div style={{ fontSize: '12px', fontWeight: 700, color: '#3b0764' }}>
+                        <div className="book-proof-idle-text">
+                          <div className="book-proof-drop-title">
                             Click or Drop Screenshot Here
                           </div>
-                          <div style={{ fontSize: '10.5px', color: '#7e22ce' }}>
-                            Any size file (MB/KB) will be auto-compressed to &lt; 100 KB instantly
+                          <div className="book-proof-drop-sub">
+                            Auto-compressed to &lt; 100 KB instantly
                           </div>
                         </div>
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    background: '#ffffff',
-                    border: '1px solid #e9d5ff',
-                    borderRadius: '8px',
-                    padding: '8px 12px'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div className="book-proof-preview-bar">
+                    <div className="book-proof-preview-left">
                       <img
                         src={proofPreviewUrl}
                         alt="Payment Proof"
-                        style={{
-                          width: '46px',
-                          height: '46px',
-                          borderRadius: '6px',
-                          objectFit: 'cover',
-                          border: '1.5px solid #d946ef'
-                        }}
+                        className="book-proof-thumb"
                       />
                       <div>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div className="book-proof-status-label">
                           <FileCheck2 size={14} color="#10b981" />
-                          <span>Screenshot Compressed</span>
+                          <span>Screenshot Ready</span>
                         </div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>
+                        <div className="book-proof-size-info">
                           {proofOriginalSizeKB ? `${proofOriginalSizeKB} KB ➔ ` : ''}
-                          <strong style={{ color: '#059669' }}>{proofCompressedSizeKB} KB</strong> (Ready to Upload)
+                          <strong>{proofCompressedSizeKB} KB</strong> (Ready to Upload)
                         </div>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div className="book-proof-btn-group">
                       <button
                         type="button"
                         onClick={() => proofFileInputRef.current?.click()}
-                        style={{
-                          background: '#f3e8ff',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '6px 10px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: '#7e22ce',
-                          cursor: 'pointer'
-                        }}
+                        className="book-btn-change-proof"
                       >
                         Change
                       </button>
                       <button
                         type="button"
                         onClick={handleRemoveProof}
-                        style={{
-                          background: '#fef2f2',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '6px 10px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: '#ef4444',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '3px'
-                        }}
+                        className="book-btn-remove-proof"
                       >
                         <Trash2 size={12} />
                         <span>Remove</span>
@@ -1260,7 +896,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
               </div>
             </div>
 
-            <div className="partner-modal-footer">
+            <div className="partner-modal-footer book-modal-footer">
               <button type="button" className="btn-partner-outline" onClick={() => setStep('form')} disabled={submitPaymentProof.isPending || isCompressingProof}>
                 Back to Details
               </button>
@@ -1273,7 +909,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                 ) : (
                   <>
                     <CheckCircle2 size={16} />
-                    <span>Verify Payment & Confirm Booking</span>
+                    <span>Verify Payment & Confirm</span>
                   </>
                 )}
               </button>
@@ -1283,54 +919,42 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
 
         {/* STEP 3: Success Confirmation */}
         {step === 'success' && (
-          <div style={{ padding: '36px 24px', textAlign: 'center' }}>
-            <CheckCircle2 size={58} color="#10b981" style={{ margin: '0 auto 14px auto' }} />
-            <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
+          <div className="book-success-card">
+            <CheckCircle2 size={54} color="#10b981" className="book-success-icon" />
+            <h2 className="book-success-heading">
               Booking Confirmed! 🎉
             </h2>
-            <p style={{ fontSize: '13.5px', color: '#64748b', margin: '0 0 16px 0' }}>
+            <p className="book-success-sub">
               Performer <strong>{partner.name}</strong> is reserved for <strong>{bookingDate} ({startTime} - {endTime})</strong>.
             </p>
 
-            <div style={{
-              background: '#f8fafc',
-              padding: '16px',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0',
-              display: 'inline-block',
-              textAlign: 'left',
-              fontSize: '12.5px',
-              color: '#334155',
-              marginBottom: '20px',
-              minWidth: '320px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-            }}>
+            <div className="book-success-details-box">
               {/* Client Snapshot with Avatar */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '10px', marginBottom: '10px', borderBottom: '1px solid #e2e8f0' }}>
+              <div className="book-success-client-row">
                 <img
                   src={avatarUrl}
                   alt={name}
-                  style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #ff1379' }}
+                  className="book-success-client-avatar"
                 />
                 <div>
-                  <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '13.5px' }}>{name}</div>
-                  <div style={{ fontSize: '11px', color: '#64748b' }}>{phone} • {email}</div>
+                  <div className="book-success-client-name">{name}</div>
+                  <div className="book-success-client-contact">{phone} • {email}</div>
                 </div>
               </div>
 
-              <div style={{ marginBottom: '4px' }}>Booking Code: <strong style={{ color: '#ff1379' }}>{bookingCode}</strong></div>
-              <div style={{ marginBottom: '4px' }}>Total Amount: <strong>₹{totalAmount}</strong> (Advance Paid: ₹{advanceAmount})</div>
-              <div style={{ marginBottom: '4px' }}>UTR Reference: <code style={{ color: '#0284c7' }}>{utrNumber}</code></div>
+              <div className="book-success-meta-row">Booking Code: <strong style={{ color: '#ff1379' }}>{bookingCode}</strong></div>
+              <div className="book-success-meta-row">Booking Fee Paid: <strong style={{ color: '#059669' }}>₹{bookingFee}</strong></div>
+              <div className="book-success-meta-row">UTR Reference: <code style={{ color: '#0284c7' }}>{utrNumber}</code></div>
 
               {/* Payment Proof Preview if uploaded */}
               {proofPreviewUrl && (
-                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="book-success-proof-row">
                   <img
                     src={proofPreviewUrl}
                     alt="Receipt"
-                    style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', border: '1px solid #cbd5e1' }}
+                    className="book-success-proof-thumb"
                   />
-                  <div style={{ fontSize: '11.5px', color: '#059669', fontWeight: 700 }}>
+                  <div className="book-success-proof-status">
                     Payment screenshot verified (&lt;100 KB)
                   </div>
                 </div>
@@ -1340,7 +964,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
             <div>
               <button
                 className="btn-partner-primary"
-                style={{ padding: '10px 24px' }}
+                style={{ padding: '10px 24px', width: 'auto', margin: '0 auto' }}
                 onClick={onClose}
               >
                 Done / Back to Portal
@@ -1352,3 +976,8 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
     </div>
   );
 };
+
+export default BookPerformerModal;
+
+
+

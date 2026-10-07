@@ -18,7 +18,7 @@ interface EventDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onFindPartner: (event: GarbaEvent) => void;
-  onToggleJoin: (eventId: string) => void;
+  onToggleJoin?: (eventId: string) => void;
 }
 
 export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
@@ -26,7 +26,6 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   isOpen,
   onClose,
   onFindPartner,
-  onToggleJoin,
 }) => {
   if (!isOpen || !event) return null;
 
@@ -210,15 +209,8 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         <div className="partner-modal-footer" style={{ position: 'sticky', bottom: 0, background: '#ffffff', borderTop: '1px solid #f1f5f9' }}>
           <button
             type="button"
-            className="btn-partner-outline"
-            onClick={() => onToggleJoin(event.id)}
-          >
-            {event.isJoined ? 'Leave RSVP' : 'RSVP / Join Event'}
-          </button>
-          
-          <button
-            type="button"
             className="btn-partner-primary"
+            style={{ width: '100%' }}
             onClick={() => {
               onClose();
               onFindPartner(event);
