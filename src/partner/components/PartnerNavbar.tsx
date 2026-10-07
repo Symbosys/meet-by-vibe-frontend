@@ -13,7 +13,8 @@ import {
     Users,
     X
 } from 'lucide-react';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 
 interface PartnerNavbarProps {
@@ -44,6 +45,17 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
 }) => {
   const navigate = useNavigate();
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // Lock background body scroll when drawer is open
+  useEffect(() => {
+    if (isMobileDrawerOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isMobileDrawerOpen]);
 
   // Dynamic State ISO Code from country-state-city
   const stateIsoCode = useMemo(() => {
@@ -202,8 +214,8 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
         </div>
       </div>
 
-      {/* Right-Side Slide-in Sidebar Drawer */}
-      {isMobileDrawerOpen && (
+      {/* Right-Side Slide-in Sidebar Drawer (Portal to document.body for true viewport fixed positioning) */}
+      {isMobileDrawerOpen && createPortal(
         <>
           <div
             className="partner-mobile-drawer-backdrop"
@@ -213,10 +225,10 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
             {/* Sidebar Header */}
             <div className="partner-mobile-drawer-header">
               <div className="partner-drawer-brand">
-                <div className="partner-brand-logo-icon" style={{ width: '28px', height: '28px' }}>
-                  <Sparkles size={16} color="#ffffff" />
+                <div className="partner-brand-logo-icon" style={{ width: '26px', height: '26px', borderRadius: '8px' }}>
+                  <Sparkles size={14} color="#ffffff" />
                 </div>
-                <span style={{ fontWeight: 800, fontSize: '15px', color: '#1e1b4b' }}>
+                <span className="partner-drawer-brand-name">
                   MeetBy<span style={{ color: 'var(--gm-primary)' }}>Vibe</span>
                 </span>
               </div>
@@ -225,8 +237,9 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
                 className="partner-mobile-drawer-close"
                 onClick={() => setIsMobileDrawerOpen(false)}
                 title="Close sidebar"
+                aria-label="Close sidebar"
               >
-                <X size={18} />
+                <X size={15} />
               </button>
             </div>
 
@@ -234,7 +247,7 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
             <div className="partner-mobile-drawer-body">
               {/* Search Bar in Sidebar */}
               <div className="partner-drawer-search-wrap">
-                <Search size={15} className="partner-drawer-search-icon" />
+                <Search size={14} className="partner-drawer-search-icon" />
                 <input
                   type="text"
                   className="partner-drawer-search-input"
@@ -255,13 +268,13 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
                 }}
               >
                 <div className="partner-menu-item-icon icon-rose">
-                  <MapPin size={18} />
+                  <MapPin size={16} />
                 </div>
                 <div className="partner-menu-item-text">
                   <span className="partner-menu-label">Current Location</span>
                   <strong className="partner-menu-val">{locationDisplayText}</strong>
                 </div>
-                <ChevronRight size={16} className="partner-menu-arrow" />
+                <ChevronRight size={14} className="partner-menu-arrow" />
               </div>
 
               {/* 2. GPS Auto-Detect via Ola Maps Tile */}
@@ -274,15 +287,15 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
                   }}
                 >
                   <div className="partner-menu-item-icon icon-blue">
-                    {isLocating ? <Loader2 size={18} className="spin-animate" /> : <LocateFixed size={18} />}
+                    {isLocating ? <Loader2 size={16} className="spin-animate" /> : <LocateFixed size={16} />}
                   </div>
                   <div className="partner-menu-item-text">
                     <span className="partner-menu-label">GPS Auto-Detect</span>
                     <strong className="partner-menu-val">
-                      {isLocating ? 'Detecting via Ola Maps...' : 'Fetch Live GPS Location'}
+                      {isLocating ? 'Detecting via Ola Maps...' : 'Fetch Live GPS'}
                     </strong>
                   </div>
-                  <ChevronRight size={16} className="partner-menu-arrow" />
+                  <ChevronRight size={14} className="partner-menu-arrow" />
                 </div>
               )}
 
@@ -301,7 +314,7 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
                   }
                 }}
               >
-                <CalendarPlus size={18} />
+                <CalendarPlus size={15} />
                 <span>Create & Register Garba Event</span>
               </button>
 
@@ -314,7 +327,7 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                 >
-                  <Compass size={16} color="var(--gm-primary)" />
+                  <Compass size={15} color="var(--gm-primary)" />
                   <span>Garba Events Carousel</span>
                 </div>
                 <div
@@ -325,13 +338,14 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
                     el?.scrollIntoView({ behavior: 'smooth' });
                   }}
                 >
-                  <Users size={16} color="#0284c7" />
+                  <Users size={15} color="#0284c7" />
                   <span>Find Garba Partners</span>
                 </div>
               </div>
             </div>
           </aside>
-        </>
+        </>,
+        document.body
       )}
     </header>
   );
