@@ -5,8 +5,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://meetbyvibe-com-100
 
 // local url
 // const API_BASE_URL =
-  // import.meta.env.VITE_API_URL ||
-  // (import.meta.env.DEV ? "http://localhost:4000/api/v1" : "https://meetbyvibe-com-100172.hostingersite.com/api/v1");
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://localhost:4000/api/v1" : "https://meetbyvibe-com-100172.hostingersite.com/api/v1");
 
 
 export const apiClient = axios.create({
