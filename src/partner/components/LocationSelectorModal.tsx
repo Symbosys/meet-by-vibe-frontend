@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { X, MapPin, Check, Search } from 'lucide-react';
-import { State, City } from 'country-state-city';
+import { Loader2, MapPin, Navigation, RefreshCw, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { fetchCurrentLocationViaOlaMaps } from '../../utils/olaMaps';
 
 interface LocationSelectorModalProps {
   isOpen: boolean;
@@ -17,72 +17,40 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
   onClose,
   onSelectLocation,
 }) => {
-  // All Indian States from country-state-city
-  const indianStates = useMemo(() => State.getStatesOfCountry('IN'), []);
-
-  // Find initial state object
-  const initialStateObj = useMemo(() => {
-    return (
-      indianStates.find((s) => s.name.toLowerCase() === selectedState.toLowerCase()) ||
-      indianStates.find((s) => s.isoCode === 'GJ') ||
-      indianStates[0]
-    );
-  }, [indianStates, selectedState]);
-
-  const [activeStateObj, setActiveStateObj] = useState(initialStateObj);
+  const [activeStateName, setActiveStateName] = useState(selectedState);
   const [activeCityName, setActiveCityName] = useState(selectedCity);
-  const [stateSearch, setStateSearch] = useState('');
-  const [citySearch, setCitySearch] = useState('');
+  const [formattedAddress, setFormattedAddress] = useState('');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [isDetecting, setIsDetecting] = useState(false);
+
+  const handleFetchLiveLocation = async () => {
+    setIsDetecting(true);
+    try {
+      const loc = await fetchCurrentLocationViaOlaMaps();
+      if (loc.state) setActiveStateName(loc.state);
+      if (loc.city) setActiveCityName(loc.city);
+      setFormattedAddress(loc.formattedAddress || `${loc.city}, ${loc.state}`);
+      setCoords({ lat: loc.latitude, lng: loc.longitude });
+      onSelectLocation(loc.state || selectedState, loc.city || selectedCity);
+    } catch (err) {
+      console.warn('Location detection error:', err);
+    } finally {
+      setIsDetecting(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
-      const match = indianStates.find((s) => s.name.toLowerCase() === selectedState.toLowerCase()) || initialStateObj;
-      setActiveStateObj(match);
+      setActiveStateName(selectedState);
       setActiveCityName(selectedCity);
-      setStateSearch('');
-      setCitySearch('');
+      handleFetchLiveLocation();
     }
-  }, [isOpen, selectedState, selectedCity, indianStates, initialStateObj]);
-
-  // Cities for the active state from country-state-city
-  const citiesOfState = useMemo(() => {
-    if (!activeStateObj) return [];
-    return City.getCitiesOfState('IN', activeStateObj.isoCode);
-  }, [activeStateObj]);
-
-  // Filtered States
-  const filteredStates = useMemo(() => {
-    if (!stateSearch.trim()) return indianStates;
-    return indianStates.filter((s) =>
-      s.name.toLowerCase().includes(stateSearch.toLowerCase().trim())
-    );
-  }, [indianStates, stateSearch]);
-
-  // Filtered Cities
-  const filteredCities = useMemo(() => {
-    if (!citySearch.trim()) return citiesOfState;
-    return citiesOfState.filter((c) =>
-      c.name.toLowerCase().includes(citySearch.toLowerCase().trim())
-    );
-  }, [citiesOfState, citySearch]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleStateSelect = (stateObj: typeof indianStates[0]) => {
-    setActiveStateObj(stateObj);
-    const stateCities = City.getCitiesOfState('IN', stateObj.isoCode);
-    if (stateCities.length > 0) {
-      setActiveCityName(stateCities[0].name);
-    } else {
-      setActiveCityName(stateObj.name);
-    }
-    setCitySearch('');
-  };
-
   const handleApply = () => {
-    if (activeStateObj) {
-      onSelectLocation(activeStateObj.name, activeCityName);
-    }
+    onSelectLocation(activeStateName, activeCityName);
     onClose();
   };
 
@@ -90,168 +58,195 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
     <div className="partner-modal-overlay" onClick={onClose}>
       <div 
         className="partner-modal-card" 
-        style={{ maxWidth: '580px', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }} 
+        style={{ maxWidth: '480px', display: 'flex', flexDirection: 'column' }} 
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="partner-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <MapPin size={18} color="#ff1379" />
-            <h3 className="partner-modal-title">Select Festival State & City</h3>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: '#ffe4e6',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#e11d48'
+            }}>
+              <MapPin size={17} />
+            </div>
+            <div>
+              <h3 className="partner-modal-title" style={{ fontSize: '16px', margin: 0 }}>
+                Your Current Location
+              </h3>
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                Powered by Ola Maps Live GPS
+              </div>
+            </div>
           </div>
           <button className="partner-round-arrow-btn" onClick={onClose}>
             <X size={16} />
           </button>
         </div>
 
-        <div className="partner-modal-body" style={{ overflowY: 'auto', flex: 1, padding: '20px 24px' }}>
-          {/* 1. State Selector with country-state-city */}
-          <div style={{ marginBottom: '22px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                1. Select State ({indianStates.length} Indian States)
-              </label>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#ff1379' }}>
-                Selected: {activeStateObj?.name}
+        {/* Modal Body */}
+        <div className="partner-modal-body" style={{ padding: '24px' }}>
+          {/* Main Location Info Card */}
+          <div
+            style={{
+              padding: '20px',
+              borderRadius: '14px',
+              border: '1.5px solid #fecdd3',
+              background: 'linear-gradient(145deg, #fff5f7 0%, #ffffff 100%)',
+              boxShadow: '0 4px 16px rgba(225, 29, 72, 0.08)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Live Indicator */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: isDetecting ? '#f59e0b' : '#10b981',
+                    boxShadow: isDetecting ? '0 0 8px #f59e0b' : '0 0 8px #10b981',
+                    display: 'inline-block'
+                  }}
+                />
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  {isDetecting ? 'Detecting via Ola Maps...' : 'Live GPS Detected'}
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: '#e11d48',
+                  background: '#ffe4e6',
+                  padding: '2px 8px',
+                  borderRadius: '12px'
+                }}
+              >
+                Ola Maps
               </span>
             </div>
 
-            {/* State Search Bar */}
-            <div style={{ position: 'relative', marginBottom: '10px' }}>
-              <Search size={14} style={{ position: 'absolute', left: '12px', top: '11px', color: '#94a3b8' }} />
-              <input
-                type="text"
-                placeholder="Search state (e.g. Gujarat, Maharashtra, Jharkhand)..."
-                value={stateSearch}
-                onChange={(e) => setStateSearch(e.target.value)}
-                style={{
-                  width: '100%',
-                  height: '36px',
-                  paddingLeft: '34px',
-                  paddingRight: '12px',
-                  fontSize: '12.5px',
-                  borderRadius: '8px',
-                  border: '1.5px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  outline: 'none'
-                }}
-              />
+            {/* City & State Display */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '10px',
+                background: '#ff1379',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                flexShrink: 0
+              }}>
+                <Navigation size={20} />
+              </div>
+              <div>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
+                  {isDetecting ? 'Locating...' : activeCityName}
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#e11d48', marginTop: '2px' }}>
+                  {activeStateName || 'India'}
+                </div>
+              </div>
             </div>
 
-            {/* State Pills */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '130px', overflowY: 'auto', padding: '4px 2px' }}>
-              {filteredStates.map((st) => {
-                const isSelected = activeStateObj?.isoCode === st.isoCode;
-                return (
-                  <button
-                    key={st.isoCode}
-                    type="button"
-                    onClick={() => handleStateSelect(st)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '16px',
-                      border: isSelected ? '2px solid #ff1379' : '1px solid #cbd5e1',
-                      background: isSelected ? '#fff0f6' : '#ffffff',
-                      color: isSelected ? '#ff1379' : '#334155',
-                      fontSize: '12.5px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {st.name} ({st.isoCode})
-                  </button>
-                );
-              })}
-            </div>
+            {/* Address if available */}
+            {formattedAddress && !isDetecting && (
+              <div style={{
+                marginTop: '12px',
+                paddingTop: '12px',
+                borderTop: '1px dashed #fecdd3',
+                fontSize: '12.5px',
+                color: '#475569',
+                lineHeight: 1.4
+              }}>
+                📍 {formattedAddress}
+              </div>
+            )}
+
+            {/* Coordinates if available */}
+            {coords && !isDetecting && (
+              <div style={{
+                marginTop: '8px',
+                fontSize: '11px',
+                color: '#94a3b8',
+                fontWeight: 500
+              }}>
+                GPS: {coords.lat.toFixed(4)}°N, {coords.lng.toFixed(4)}°E
+              </div>
+            )}
           </div>
 
-          {/* 2. City Selector with country-state-city */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                2. Select City ({citiesOfState.length} in {activeStateObj?.name})
-              </label>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981' }}>
-                Selected: {activeCityName}
-              </span>
-            </div>
-
-            {/* City Search Bar */}
-            <div style={{ position: 'relative', marginBottom: '10px' }}>
-              <Search size={14} style={{ position: 'absolute', left: '12px', top: '11px', color: '#94a3b8' }} />
-              <input
-                type="text"
-                placeholder={`Search city in ${activeStateObj?.name || 'state'}...`}
-                value={citySearch}
-                onChange={(e) => setCitySearch(e.target.value)}
-                style={{
-                  width: '100%',
-                  height: '36px',
-                  paddingLeft: '34px',
-                  paddingRight: '12px',
-                  fontSize: '12.5px',
-                  borderRadius: '8px',
-                  border: '1.5px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
-            {/* City Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', maxHeight: '180px', overflowY: 'auto', padding: '4px 2px' }}>
-              {filteredCities.length === 0 ? (
-                <div style={{ gridColumn: 'span 2', padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
-                  No cities found for this search.
-                </div>
+          {/* Re-detect Button */}
+          <div style={{ marginTop: '16px' }}>
+            <button
+              type="button"
+              onClick={handleFetchLiveLocation}
+              disabled={isDetecting}
+              style={{
+                width: '100%',
+                height: '42px',
+                borderRadius: '10px',
+                border: '1.5px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#334155',
+                fontSize: '13px',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                cursor: isDetecting ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {isDetecting ? (
+                <Loader2 size={16} className="spin-animate" />
               ) : (
-                filteredCities.map((ct) => {
-                  const isSelected = activeCityName.toLowerCase() === ct.name.toLowerCase();
-                  return (
-                    <div
-                      key={ct.name}
-                      onClick={() => setActiveCityName(ct.name)}
-                      style={{
-                        padding: '9px 12px',
-                        borderRadius: '8px',
-                        border: isSelected ? '2px solid #ff1379' : '1px solid #e2e8f0',
-                        background: isSelected ? '#fff0f6' : '#f8fafc',
-                        color: isSelected ? '#ff1379' : '#0f172a',
-                        fontWeight: 700,
-                        fontSize: '13px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        🏙️ {ct.name}
-                      </span>
-                      {isSelected && <Check size={15} color="#ff1379" />}
-                    </div>
-                  );
-                })
+                <RefreshCw size={15} color="#e11d48" />
               )}
-            </div>
+              <span>{isDetecting ? 'Detecting Current Location...' : 'Re-Detect Current Location'}</span>
+            </button>
           </div>
         </div>
 
         {/* Modal Footer */}
         <div className="partner-modal-footer">
           <button type="button" className="btn-partner-outline" onClick={onClose}>
-            Cancel
+            Close
           </button>
-          <button type="button" className="btn-partner-primary" onClick={handleApply}>
-            <span>Set Location ({activeCityName}, {activeStateObj?.isoCode})</span>
+          <button
+            type="button"
+            className="btn-partner-primary"
+            onClick={handleApply}
+            style={{
+              background: 'linear-gradient(135deg, #ff1379 0%, #ff4b93 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '9999px',
+              padding: '10px 20px',
+              fontWeight: 700,
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}
+          >
+            <span>Confirm Location ({activeCityName})</span>
           </button>
         </div>
       </div>
     </div>
   );
 };
+
+export default LocationSelectorModal;
 

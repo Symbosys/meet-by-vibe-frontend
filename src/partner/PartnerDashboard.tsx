@@ -1,25 +1,26 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { AdminUser } from '../admin/types/admin.types';
 import { useEvents } from '../hooks/useEvents';
 import { useUsers } from '../hooks/useUsers';
+import { fetchCurrentLocationViaOlaMaps } from '../utils/olaMaps';
 import { BookPerformerModal } from './components/BookPerformerModal';
 import { EventDetailsModal } from './components/EventDetailsModal';
 import { FestiveHeroBanner } from './components/FestiveHeroBanner';
+import { GenderPreferenceModal } from './components/GenderPreferenceModal';
 import { LocationSelectorModal } from './components/LocationSelectorModal';
 import { NotificationsModal } from './components/NotificationsModal';
 import { PartnerFooter } from './components/PartnerFooter';
 import { PartnerNavbar } from './components/PartnerNavbar';
 import { PartnerProfileModal } from './components/PartnerProfileModal';
 import { RecommendedPartnersSection } from './components/RecommendedPartnersSection';
-import { StatsRow } from './components/StatsRow';
-import { UpcomingEventsSection } from './components/UpcomingEventsSection';
+// import { UpcomingEventsSection } from './components/UpcomingEventsSection';
 import {
   CURRENT_USER,
   INITIAL_REQUESTS,
   UPCOMING_EVENTS
 } from './data/partnerMockData';
 import './partner.css';
-import type { GarbaEvent, GarbaPartner, PartnerRequest, PartnerStats } from './types/partner.types';
+import type { GarbaEvent, GarbaPartner, PartnerRequest } from './types/partner.types';
 
 // Helper to map DB AdminUser directly to UI GarbaPartner
 function mapAdminUserToPartner(user: AdminUser, favoritePartnerIds: Set<string>): GarbaPartner {
@@ -82,9 +83,30 @@ interface PartnerDashboardProps {
 }
 
 export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAdmin }) => {
-  // Location State
+  // Location State & Ola Maps Live Detection
   const [selectedState, setSelectedState] = useState<string>(CURRENT_USER.state);
   const [selectedCity, setSelectedCity] = useState<string>(CURRENT_USER.city);
+  const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [locationDetected, setLocationDetected] = useState<boolean>(false);
+
+  const handleDetectLocation = async () => {
+    setIsLocating(true);
+    try {
+      const loc = await fetchCurrentLocationViaOlaMaps();
+      if (loc.state) setSelectedState(loc.state);
+      if (loc.city) setSelectedCity(loc.city);
+      setLocationDetected(true);
+    } catch (err) {
+      console.warn('Could not auto-fetch location via Ola Maps:', err);
+    } finally {
+      setIsLocating(false);
+    }
+  };
+
+  useEffect(() => {
+    // Automatically detect user's current live location on mount using Ola Maps API
+    handleDetectLocation();
+  }, []);
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -130,7 +152,6 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   }, [eventsData, localEventState]);
 
   const [requests, setRequests] = useState<PartnerRequest[]>(INITIAL_REQUESTS);
-  const [bookedPerformersCount, setBookedPerformersCount] = useState(1);
 
   // Modal States
   const [selectedPartner, setSelectedPartner] = useState<GarbaPartner | null>(null);
@@ -143,9 +164,47 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
 
-  // Filter dynamic partners based on search query & selected city
+  // Gender Preference Filter (persisted in localStorage to prevent popup on page refresh)
+  const [selectedGenderPreference, setSelectedGenderPreference] = useState<'MALE' | 'FEMALE' | 'ALL'>(() => {
+    try {
+      const saved = localStorage.getItem('meetbyvibe_gender_preference');
+      if (saved === 'MALE' || saved === 'FEMALE' || saved === 'ALL') {
+        return saved;
+      }
+    } catch {
+      // fallback
+    }
+    return 'ALL';
+  });
+
+  const [isGenderModalOpen, setIsGenderModalOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('meetbyvibe_gender_preference');
+      return !saved; // If already selected previously, do not open popup
+    } catch {
+      return true;
+    }
+  });
+
+  const handleSelectGenderPreference = (gender: 'MALE' | 'FEMALE' | 'ALL') => {
+    setSelectedGenderPreference(gender);
+    try {
+      localStorage.setItem('meetbyvibe_gender_preference', gender);
+    } catch (e) {
+      console.error('Failed to save gender preference to localStorage:', e);
+    }
+  };
+
+  // Filter dynamic partners based on gender preference, search query & selected city
   const filteredPartners = useMemo(() => {
     return dynamicPartners.filter((p) => {
+      // Gender filtering
+      if (selectedGenderPreference && selectedGenderPreference !== 'ALL') {
+        if (p.gender && p.gender.toUpperCase() !== selectedGenderPreference.toUpperCase()) {
+          return false;
+        }
+      }
+
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
       const matchesSearch = 
@@ -155,15 +214,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
       
       return matchesSearch;
     });
-  }, [dynamicPartners, searchQuery]);
-
-  // Stats Calculation
-  const stats: PartnerStats = {
-    partnerRequests: requests.length,
-    matches: dynamicPartners.length > 0 ? Math.min(dynamicPartners.length, 6) : 4,
-    newMessages: 8,
-    upcomingEvents: displayedEvents.filter(e => e.isJoined).length + bookedPerformersCount,
-  };
+  }, [dynamicPartners, searchQuery, selectedGenderPreference]);
 
   // Handlers
   const handleOpenProfile = (partner: GarbaPartner) => {
@@ -185,7 +236,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
     });
   };
 
-  const handleToggleSaveEvent = (eventId: string) => {
+  /* const handleToggleSaveEvent = (eventId: string) => {
     setLocalEventState((prev) => {
       const current = displayedEvents.find((e) => e.id === eventId);
       const isFav = prev[eventId]?.isFavorite !== undefined ? prev[eventId].isFavorite : current?.isFavorite;
@@ -197,7 +248,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
         },
       };
     });
-  };
+  }; */
 
   const handleToggleJoinEvent = (eventId: string) => {
     setSelectedEvent((prev) => (prev && prev.id === eventId ? { ...prev, isJoined: !prev.isJoined } : prev));
@@ -227,8 +278,8 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
     }
   };
 
-  const handleBookingComplete = (_bookingRecord: any) => {
-    setBookedPerformersCount((prev) => prev + 1);
+  const handleBookingComplete = () => {
+    // Booking confirmation handled inside modal
   };
 
   const handleAcceptRequest = (requestId: string) => {
@@ -240,18 +291,6 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
     setRequests((prev) => prev.filter((r) => r.id !== requestId));
   };
 
-  const handleSelectStat = (type: 'requests' | 'matches' | 'messages' | 'events') => {
-    if (type === 'requests') setIsNotificationsModalOpen(true);
-    if (type === 'events') {
-      const el = document.getElementById('events-section');
-      el?.scrollIntoView({ behavior: 'smooth' });
-    }
-    if (type === 'matches') {
-      const el = document.getElementById('partners-section');
-      el?.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   return (
     <div className="partner-portal">
       {/* Top Navbar */}
@@ -260,10 +299,16 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
         onSearchChange={setSearchQuery}
         selectedState={selectedState}
         selectedCity={selectedCity}
+        isLocating={isLocating}
+        locationDetected={locationDetected}
+        onDetectLocation={handleDetectLocation}
         onOpenLocationModal={() => setIsLocationModalOpen(true)}
         onOpenNotifications={() => setIsNotificationsModalOpen(true)}
         onOpenMessages={() => setIsNotificationsModalOpen(true)}
         onSwitchToAdmin={onSwitchToAdmin || (() => {})}
+        onRegisterEvent={() => {
+          window.location.href = '/create-event';
+        }}
       />
 
       {/* Main Body Container */}
@@ -274,18 +319,15 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
           onSelectEvent={handleViewEventDetails}
         />
 
-        {/* 4 Stats Cards */}
-        <StatsRow stats={stats} onSelectStat={handleSelectStat} />
-
-        {/* Upcoming Event Section */}
-        <div id="events-section">
+        {/* Upcoming Event Section (Commented Out) */}
+        {/* <div id="events-section">
           <UpcomingEventsSection
             events={displayedEvents}
             onViewEventDetails={handleViewEventDetails}
             onFindPartnerForEvent={handleFindPartnerForEvent}
             onToggleSaveEvent={handleToggleSaveEvent}
           />
-        </div>
+        </div> */}
 
         {/* Recommended Performers & Partners Section */}
         <div id="partners-section">
@@ -295,6 +337,9 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
             onOpenProfile={handleOpenProfile}
             onBookPartner={handleOpenBook}
             onToggleFavorite={handleToggleFavoritePartner}
+            selectedGender={selectedGenderPreference}
+            onChangeGender={handleSelectGenderPreference}
+            onOpenGenderModal={() => setIsGenderModalOpen(true)}
           />
         </div>
       </main>
@@ -344,6 +389,17 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
         onClose={() => setIsNotificationsModalOpen(false)}
         onAcceptRequest={handleAcceptRequest}
         onDeclineRequest={handleDeclineRequest}
+      />
+
+      {/* Auto Pop-up on Page Load for Gender Selection */}
+      <GenderPreferenceModal
+        isOpen={isGenderModalOpen}
+        onClose={() => setIsGenderModalOpen(false)}
+        selectedGender={selectedGenderPreference}
+        onSelectGender={(gender) => {
+          handleSelectGenderPreference(gender);
+          setIsGenderModalOpen(false);
+        }}
       />
     </div>
   );

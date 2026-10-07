@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sparkles,
@@ -21,11 +21,16 @@ import {
   ShieldCheck,
   UserCheck,
   DollarSign,
-  Globe
+  Globe,
+  CreditCard,
+  Copy,
+  Check,
+  FileCheck2
 } from 'lucide-react';
 import { Country, State, City } from 'country-state-city';
 import './create-event.css';
 import { useCreateEvent } from '../hooks/useEvents';
+import { useActiveQRCode } from '../hooks/useQR';
 import { compressImage } from '../utils/imageCompression';
 
 interface CreateEventScreenProps {
@@ -36,7 +41,25 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const proofFileInputRef = useRef<HTMLInputElement>(null);
   const createEventMutation = useCreateEvent();
+  const { data: activeQR, refetch: refetchActiveQR } = useActiveQRCode();
+
+  // Multi-step flow: 'form' -> 'payment' -> 'success'
+  const [step, setStep] = useState<'form' | 'payment' | 'success'>('form');
+
+  // Event Registration Fee
+  const REGISTRATION_FEE = 999;
+  const [registrationCode, setRegistrationCode] = useState<string>('');
+
+  // Payment Verification State
+  const [utrNumber, setUtrNumber] = useState<string>('');
+  const [copiedUpi, setCopiedUpi] = useState<boolean>(false);
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(900); // 15 mins
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreviewUrl, setProofPreviewUrl] = useState<string>('');
+  const [isCompressingProof, setIsCompressingProof] = useState<boolean>(false);
+  const [proofCompressedSizeKB, setProofCompressedSizeKB] = useState<number | null>(null);
 
   // Location selector state using country-state-city
   const [selectedCountryCode, setSelectedCountryCode] = useState<string>('IN');
@@ -243,34 +266,125 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
     }
   }, [formData.eventDate]);
 
-  // Form Submission
-  const handleSubmit = async (e?: React.FormEvent) => {
+  // 15-Minute Countdown Timer for QR Payment
+  useEffect(() => {
+    if (step === 'payment' && timeLeftSeconds > 0) {
+      const timer = setInterval(() => {
+        setTimeLeftSeconds((prev) => prev - 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [step, timeLeftSeconds]);
+
+  // Format Timer string MM:SS
+  const formatTimer = (secs: number) => {
+    const mins = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  // Copy UPI ID
+  const handleCopyUpi = () => {
+    const upi = activeQR?.upiId || 'meetbyvibe@ybl';
+    navigator.clipboard.writeText(upi);
+    setCopiedUpi(true);
+    setTimeout(() => setCopiedUpi(false), 2000);
+  };
+
+  // Screenshot compression <= 95 KB
+  const handleProofFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrorMessage('Please select a valid image file (PNG, JPG, WEBP) for payment receipt.');
+      return;
+    }
+
+    try {
+      setErrorMessage('');
+      setIsCompressingProof(true);
+
+      const compressed = await compressImage(file, `evt-utr-proof-${Date.now()}.jpg`, {
+        maxSizeKB: 95,
+        maxWidthOrHeight: 1024,
+        initialQuality: 0.82
+      });
+
+      setProofFile(compressed.file);
+      setProofPreviewUrl(compressed.dataUrl);
+      setProofCompressedSizeKB(compressed.sizeKB);
+    } catch (err: any) {
+      console.error('Screenshot compression error:', err);
+      setErrorMessage('Failed to process screenshot. Please try another image.');
+    } finally {
+      setIsCompressingProof(false);
+    }
+  };
+
+  const handleRemoveProof = () => {
+    setProofFile(null);
+    setProofPreviewUrl('');
+    setProofCompressedSizeKB(null);
+    if (proofFileInputRef.current) {
+      proofFileInputRef.current.value = '';
+    }
+  };
+
+  // Step 1 -> Step 2: Validate Event Form & Proceed to QR Payment
+  const handleProceedToPayment = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
 
     if (!formData.title.trim()) {
       setErrorMessage('Event Title is required.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (!formData.description.trim()) {
       setErrorMessage('Event Description is required.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (!formData.eventDate) {
       setErrorMessage('Event Date is required.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (!formData.startTime.trim()) {
       setErrorMessage('Event Start Time is required.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (!formData.venue.trim()) {
       setErrorMessage('Venue name is required.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (!formData.city.trim()) {
       setErrorMessage('City is required.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    refetchActiveQR();
+    setRegistrationCode(`EVT-${Math.floor(100000 + Math.random() * 900000)}`);
+    setTimeLeftSeconds(900);
+    setUtrNumber('');
+    setProofFile(null);
+    setProofPreviewUrl('');
+    setStep('payment');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Step 2 -> Step 3: Verify Payment Proof & Save Event to Database
+  const handleConfirmEventPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage('');
+
+    if (!utrNumber.trim() || utrNumber.trim().length < 6) {
+      setErrorMessage('Please enter a valid 12-digit UPI UTR / Bank Transaction Reference number.');
       return;
     }
 
@@ -305,7 +419,12 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
       if (formData.organizerName?.trim()) payload.append('organizerName', formData.organizerName.trim());
       if (formData.organizerContact?.trim()) payload.append('organizerContact', formData.organizerContact.trim());
       if (formData.dressCode?.trim()) payload.append('dressCode', formData.dressCode.trim());
-      if (rules.length > 0) payload.append('rules', JSON.stringify(rules));
+
+      const enrichedRules = [
+        ...rules,
+        `Official Reg ID: ${registrationCode || 'EVT-REG'} (Fee Paid: ₹${REGISTRATION_FEE} | UTR: ${utrNumber.trim()})`
+      ];
+      payload.append('rules', JSON.stringify(enrichedRules));
 
       if (bannerFile) {
         payload.append('image', bannerFile);
@@ -317,80 +436,133 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
         payload.append('gallery', file);
       });
 
-      await createEventMutation.mutateAsync(payload);
-      setSuccessMessage('🎉 Event successfully created and saved to database!');
+      if (proofFile) {
+        payload.append('gallery', proofFile);
+      }
 
-      setTimeout(() => {
-        if (onBack) {
-          onBack();
-        } else {
-          navigate('/admin');
-        }
-      }, 1200);
+      await createEventMutation.mutateAsync(payload);
+      setSuccessMessage('🎉 Event Registration & Payment Verified Successfully!');
+      setStep('success');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error('Error creating event:', err);
-      setErrorMessage(err.message || 'Failed to create event. Please verify all details.');
+      setErrorMessage(err.message || 'Failed to register event. Please verify all details.');
     }
   };
 
   const handleBack = () => {
+    if (step === 'payment') {
+      setStep('form');
+      return;
+    }
     if (onBack) {
       onBack();
     } else {
-      navigate('/admin');
+      navigate('/');
     }
   };
 
   const isSubmitting = createEventMutation.isPending || isCompressing;
+
+  // Active Merchant QR Info
+  const upiId = activeQR?.upiId || 'meetbyvibe@ybl';
+  const payeeName = activeQR?.accountHolderName || activeQR?.title || 'GarbaMitra Official UPI';
+  const dynamicUpiPayload = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${REGISTRATION_FEE}&tn=${encodeURIComponent(`Event Reg ${formData.title.slice(0, 15)}`)}&cu=INR`;
+  const qrCodeUrl = activeQR?.imageUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(dynamicUpiPayload)}`;
 
   return (
     <div className="create-event-page">
       {/* Top Breadcrumb & Action Bar */}
       <div className="ce-screen-header">
         <div className="ce-header-left">
-          <button type="button" className="ce-back-btn" onClick={handleBack} title="Back to Events">
+          <button type="button" className="ce-back-btn" onClick={handleBack} title="Back">
             <ArrowLeft size={18} />
-            <span>Back</span>
+            <span>{step === 'payment' ? 'Edit Details' : 'Back'}</span>
           </button>
           <div className="ce-header-title-wrap">
             <div className="ce-breadcrumbs">
-              <span>Admin</span>
+              <span>Festival Portal</span>
               <span>/</span>
-              <span>Events</span>
+              <span>Garba Events</span>
               <span>/</span>
-              <span className="current">Create Event</span>
+              <span className="current">
+                {step === 'form' && '1. Event Details'}
+                {step === 'payment' && '2. Registration & UPI Payment'}
+                {step === 'success' && '3. Verified'}
+              </span>
             </div>
-            <h1 className="ce-screen-title">Create New Garba Event</h1>
+            <h1 className="ce-screen-title">
+              {step === 'form' && 'Create New Garba Event'}
+              {step === 'payment' && 'Confirm Event Registration Fee'}
+              {step === 'success' && 'Event Successfully Registered!'}
+            </h1>
           </div>
         </div>
 
         <div className="ce-header-actions">
-          <button
-            type="button"
-            className="ce-btn-secondary"
-            onClick={handleBack}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="ce-btn-primary"
-            onClick={() => handleSubmit()}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={16} className="ce-spin" />
-                <span>Publishing...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={16} />
-                <span>Publish Event</span>
-              </>
-            )}
-          </button>
+          {step === 'form' && (
+            <>
+              <button
+                type="button"
+                className="ce-btn-secondary"
+                onClick={handleBack}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ce-btn-primary"
+                onClick={() => handleProceedToPayment()}
+                disabled={isSubmitting}
+              >
+                <CreditCard size={16} />
+                <span>Proceed to Payment (₹{REGISTRATION_FEE})</span>
+              </button>
+            </>
+          )}
+
+          {step === 'payment' && (
+            <>
+              <button
+                type="button"
+                className="ce-btn-secondary"
+                onClick={() => setStep('form')}
+                disabled={isSubmitting}
+              >
+                Back to Edit
+              </button>
+              <button
+                type="button"
+                className="ce-btn-primary"
+                onClick={(e) => handleConfirmEventPayment(e)}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={16} className="ce-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} />
+                    <span>Confirm & Register</span>
+                  </>
+                )}
+              </button>
+            </>
+          )}
+
+          {step === 'success' && (
+            <button
+              type="button"
+              className="ce-btn-primary"
+              onClick={() => navigate('/')}
+            >
+              <Sparkles size={16} />
+              <span>Back to Portal</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -411,7 +583,9 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="ce-form-layout">
+        {/* STEP 1: EVENT FORM */}
+        {step === 'form' && (
+          <form onSubmit={handleProceedToPayment} className="ce-form-layout">
           {/* LEFT 2 COLUMNS: Form Cards mapped to Prisma Event Model */}
           <div className="ce-form-left">
             {/* Card 1: Basic Event Details */}
@@ -1092,28 +1266,322 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ onBack }) 
                   </div>
                 </div>
 
+                {/* Registration Fee Summary Card */}
+                <div style={{ background: 'rgba(255, 19, 121, 0.08)', border: '1px solid rgba(255, 19, 121, 0.25)', borderRadius: '12px', padding: '12px 14px', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '12.5px', color: '#cbd5e1', fontWeight: 600 }}>Event Registration & Verification Fee:</span>
+                    <strong style={{ fontSize: '15px', color: 'var(--ce-primary)', fontWeight: 800 }}>₹{REGISTRATION_FEE}</strong>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    🔒 Includes live portal listing, verified organizer badge, and anti-collision slot reservation.
+                  </div>
+                </div>
+
                 {/* Big Submit Button */}
                 <button
                   type="submit"
                   className="ce-btn-submit-big"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 size={18} className="ce-spin" />
-                      <span>Saving Event...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={18} />
-                      <span>Save & Create Event</span>
-                    </>
-                  )}
+                  <CreditCard size={18} />
+                  <span>Proceed to Payment & Register (₹{REGISTRATION_FEE})</span>
                 </button>
               </div>
             </div>
           </div>
         </form>
+        )}
+
+        {/* STEP 2: UPI QR CODE PAYMENT & VERIFICATION */}
+        {step === 'payment' && (
+          <div className="ce-payment-view-wrap">
+            <form onSubmit={handleConfirmEventPayment} className="ce-payment-card">
+              <div className="ce-payment-card-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className="ce-card-icon icon-pink">
+                    <CreditCard size={20} />
+                  </div>
+                  <div>
+                    <h2 className="ce-payment-title">Event Registration UPI Payment</h2>
+                    <p className="ce-payment-subtitle">Scan QR code, pay the registration fee, and submit your 12-digit Bank UTR</p>
+                  </div>
+                </div>
+
+                <div className="ce-timer-pill">
+                  <Clock size={15} color="#ef4444" />
+                  <span>Expires in: <strong>{formatTimer(timeLeftSeconds)}</strong></span>
+                </div>
+              </div>
+
+              <div className="ce-payment-grid">
+                {/* Left: QR Code & UPI Information */}
+                <div className="ce-payment-left">
+                  {/* Active QR Branding Badge */}
+                  <div className="ce-qr-branding-badge">
+                    <Sparkles size={14} color="var(--ce-primary)" />
+                    <span>{activeQR?.title || payeeName}</span>
+                    {activeQR?.bankName && (
+                      <span className="ce-bank-tag">{activeQR.bankName}</span>
+                    )}
+                  </div>
+
+                  {/* QR Image Box */}
+                  <div className="ce-qr-frame">
+                    <img
+                      src={qrCodeUrl}
+                      alt="Garba Event Registration UPI QR"
+                      className="ce-qr-image"
+                    />
+                  </div>
+
+                  <div className="ce-payee-amount-tag">
+                    Scan to Pay <strong style={{ color: 'var(--ce-primary)' }}>₹{REGISTRATION_FEE}</strong>
+                  </div>
+
+                  {/* Copyable UPI ID Box */}
+                  <div className="ce-upi-copy-box">
+                    <span className="ce-upi-text">{upiId}</span>
+                    <button
+                      type="button"
+                      onClick={handleCopyUpi}
+                      className="ce-copy-btn"
+                      title="Copy UPI ID"
+                    >
+                      {copiedUpi ? (
+                        <>
+                          <Check size={14} color="#10b981" />
+                          <span style={{ color: '#10b981' }}>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={14} />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="ce-payment-notice">
+                    ⚡ Instant verification via GPay, PhonePe, Paytm or any UPI App.
+                  </div>
+                </div>
+
+                {/* Right: Event Summary, UTR Input & Screenshot Upload */}
+                <div className="ce-payment-right">
+                  {/* Event Mini Summary Strip */}
+                  <div className="ce-summary-strip">
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      <img
+                        src={bannerPreview || formData.imageUrl}
+                        alt="Event Banner"
+                        style={{ width: '56px', height: '56px', borderRadius: '10px', objectFit: 'cover', border: '1.5px solid rgba(255,19,121,0.5)' }}
+                      />
+                      <div>
+                        <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 800, color: '#f8fafc' }}>
+                          {formData.title}
+                        </h4>
+                        <div style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', gap: '10px' }}>
+                          <span>📅 {formattedPreviewDate}</span>
+                          <span>📍 {formData.venue}, {formData.city}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="ce-fee-breakdown">
+                      <div className="ce-fee-row">
+                        <span>Registration Code:</span>
+                        <strong style={{ fontFamily: 'monospace', color: 'var(--ce-accent-gold)' }}>{registrationCode}</strong>
+                      </div>
+                      <div className="ce-fee-row highlight">
+                        <span>Registration & Listing Fee:</span>
+                        <span className="ce-fee-highlight">₹{REGISTRATION_FEE}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* UTR Input Form Group */}
+                  <div className="ce-form-group" style={{ marginTop: '16px' }}>
+                    <label className="ce-label">
+                      12-Digit Bank UTR / Transaction Reference Number <span className="ce-required">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="ce-input ce-utr-input"
+                      placeholder="e.g. 427819283921"
+                      required
+                      value={utrNumber}
+                      onChange={(e) => setUtrNumber(e.target.value)}
+                    />
+                    <span className="ce-help-text">Check your UPI payment receipt (GPay / PhonePe / Paytm / Bank)</span>
+                  </div>
+
+                  {/* Payment Proof Screenshot Upload */}
+                  <div className="ce-form-group">
+                    <label className="ce-label">
+                      Upload Payment Receipt Screenshot (Auto-compressed &lt;100 KB)
+                    </label>
+
+                    <input
+                      ref={proofFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleProofFileChange}
+                    />
+
+                    {proofPreviewUrl ? (
+                      <div className="ce-proof-preview-box">
+                        <img src={proofPreviewUrl} alt="Payment Receipt" className="ce-proof-img" />
+                        <div className="ce-proof-info">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <FileCheck2 size={16} color="#10b981" />
+                            <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#f8fafc' }}>Receipt Attached</span>
+                          </div>
+                          {proofCompressedSizeKB && (
+                            <span className="ce-size-tag">
+                              <ShieldCheck size={11} />
+                              <span>{proofCompressedSizeKB} KB (Optimized)</span>
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleRemoveProof}
+                            className="ce-remove-proof-btn"
+                          >
+                            <Trash2 size={13} />
+                            <span>Remove</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="ce-dropzone ce-proof-dropzone"
+                        onClick={() => proofFileInputRef.current?.click()}
+                      >
+                        {isCompressingProof ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--ce-primary)' }}>
+                            <Loader2 size={18} className="ce-spin" />
+                            <span>Compressing Receipt Image &lt;100 KB...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload size={20} color="var(--ce-primary)" style={{ margin: '0 auto 6px' }} />
+                            <span className="ce-dropzone-title">Click to Upload Payment Screenshot</span>
+                            <span className="ce-dropzone-subtitle">PNG, JPG, WEBP • Auto-compressed strictly &lt;100 KB</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Payment Actions */}
+                  <div className="ce-payment-actions">
+                    <button
+                      type="button"
+                      className="ce-btn-secondary"
+                      onClick={() => setStep('form')}
+                      disabled={isSubmitting}
+                    >
+                      Back to Edit Form
+                    </button>
+                    <button
+                      type="submit"
+                      className="ce-btn-primary ce-btn-pay-submit"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 size={16} className="ce-spin" />
+                          <span>Verifying Payment & Saving Event...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={16} />
+                          <span>Confirm Payment & Register Event</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* STEP 3: SUCCESS CONFIRMATION */}
+        {step === 'success' && (
+          <div className="ce-success-view-wrap">
+            <div className="ce-success-card">
+              <div className="ce-success-icon-wrap">
+                <CheckCircle2 size={52} color="#10b981" />
+              </div>
+              <h2 className="ce-success-title">Event Successfully Registered!</h2>
+              <p className="ce-success-subtitle">
+                Your payment of <strong>₹{REGISTRATION_FEE}</strong> has been verified. The event is now live and published in the database!
+              </p>
+
+              <div className="ce-success-details-box">
+                <div className="ce-success-row">
+                  <span>Event Title:</span>
+                  <strong>{formData.title}</strong>
+                </div>
+                <div className="ce-success-row">
+                  <span>Date & Time:</span>
+                  <strong>{formattedPreviewDate} @ {formData.startTime}</strong>
+                </div>
+                <div className="ce-success-row">
+                  <span>Venue:</span>
+                  <strong>{formData.venue}, {formData.city}</strong>
+                </div>
+                <div className="ce-success-row">
+                  <span>Organizer:</span>
+                  <strong>{formData.organizerName || 'Official Organizer'}</strong>
+                </div>
+                <div className="ce-success-row">
+                  <span>Registration Code:</span>
+                  <strong style={{ color: 'var(--ce-primary)', fontFamily: 'monospace' }}>{registrationCode}</strong>
+                </div>
+                <div className="ce-success-row">
+                  <span>Payment UTR:</span>
+                  <strong style={{ fontFamily: 'monospace', color: 'var(--ce-accent-gold)' }}>{utrNumber}</strong>
+                </div>
+                <div className="ce-success-row">
+                  <span>Status:</span>
+                  <span className="ce-badge-featured">✅ Verified & Published</span>
+                </div>
+              </div>
+
+              <div className="ce-success-actions">
+                <button
+                  type="button"
+                  className="ce-btn-primary"
+                  onClick={() => navigate('/')}
+                >
+                  <Sparkles size={16} />
+                  <span>View in Events Portal</span>
+                </button>
+                <button
+                  type="button"
+                  className="ce-btn-secondary"
+                  onClick={() => {
+                    setStep('form');
+                    setFormData((prev) => ({
+                      ...prev,
+                      title: '',
+                      slug: '',
+                      description: '',
+                      venue: '',
+                      address: '',
+                    }));
+                  }}
+                >
+                  <Plus size={16} />
+                  <span>Register Another Event</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

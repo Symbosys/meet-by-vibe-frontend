@@ -10,6 +10,9 @@ interface RecommendedPartnersSectionProps {
   onBookPartner: (partner: GarbaPartner) => void;
   onToggleFavorite: (partnerId: string) => void;
   onViewAllPartners?: () => void;
+  selectedGender?: 'MALE' | 'FEMALE' | 'ALL';
+  onChangeGender?: (gender: 'MALE' | 'FEMALE' | 'ALL') => void;
+  onOpenGenderModal?: () => void;
 }
 
 export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProps> = ({
@@ -18,6 +21,9 @@ export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProp
   onOpenProfile,
   onBookPartner,
   onToggleFavorite,
+  selectedGender = 'ALL',
+  onChangeGender,
+  onOpenGenderModal,
 }) => {
   const [startIndex, setStartIndex] = useState(0);
   const itemsPerPage = 4;
@@ -35,25 +41,96 @@ export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProp
   return (
     <section>
       {/* Section Header */}
-      <div className="partner-section-header" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="partner-section-header" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
         <div>
           <h2 className="partner-section-title">
-            Recommended <span style={{ color: '#ff1379' }}>Performers & Partners</span> for You ✨
+            Recommended <span style={{ color: '#ff1379' }}>
+              {selectedGender === 'FEMALE' ? 'Female Performers' : selectedGender === 'MALE' ? 'Male Performers' : 'Performers & Partners'}
+            </span> for You ✨
           </h2>
           <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
-            Book verified dance choreographers and partners matching your schedule & events.
+            Book verified dance choreographers and models matching your preference & schedule.
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-          {/* Tagline */}
-          <div className="partner-rec-header-tagline">
-            <span style={{ color: '#e11d48' }}>⚔️</span>
-            <span style={{ color: '#475569' }}>Same Events</span>
-            <span style={{ color: '#94a3b8' }}>•</span>
-            <span style={{ color: '#475569' }}>Same Vibe</span>
-            <span className="accent">Instant Booking! 💖</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Gender Filter Toggle Pills */}
+          {onChangeGender && (
+            <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '24px', gap: '2px', border: '1px solid #e2e8f0' }}>
+              <button
+                type="button"
+                onClick={() => onChangeGender('ALL')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '20px',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: selectedGender === 'ALL' ? '#1e1b4b' : 'transparent',
+                  color: selectedGender === 'ALL' ? '#ffffff' : '#64748b',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => onChangeGender('FEMALE')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '20px',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: selectedGender === 'FEMALE' ? '#ff1379' : 'transparent',
+                  color: selectedGender === 'FEMALE' ? '#ffffff' : '#64748b',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                💃 Female
+              </button>
+              <button
+                type="button"
+                onClick={() => onChangeGender('MALE')}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '20px',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: selectedGender === 'MALE' ? '#0284c7' : 'transparent',
+                  color: selectedGender === 'MALE' ? '#ffffff' : '#64748b',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                🕺 Male
+              </button>
+              {onOpenGenderModal && (
+                <button
+                  type="button"
+                  onClick={onOpenGenderModal}
+                  style={{
+                    padding: '5px 8px',
+                    borderRadius: '20px',
+                    border: 'none',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: 'transparent',
+                    color: '#ff1379',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}
+                  title="Select Partner Preference"
+                >
+                  ✨
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="partner-nav-arrows">
             <button 
