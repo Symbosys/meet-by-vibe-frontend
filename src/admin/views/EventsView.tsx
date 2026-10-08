@@ -1,21 +1,21 @@
-import React, { useState, useMemo } from 'react';
 import {
-  Calendar,
-  Plus,
-  Search,
-  MapPin,
-  Clock,
-  Sparkles,
-  Edit3,
-  Trash2,
-  Users,
-  Loader2,
-  RefreshCw,
-  AlertCircle,
-  CalendarCheck2
+    AlertCircle,
+    Calendar,
+    CalendarCheck2,
+    Clock,
+    Edit3,
+    Loader2,
+    MapPin,
+    Plus,
+    RefreshCw,
+    Search,
+    Sparkles,
+    Trash2,
+    Users
 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { useDeleteEvent, useEvents, useUpdateEvent } from '../../hooks/useEvents';
 import type { GarbaEvent } from '../../partner/types/partner.types';
-import { useEvents, useDeleteEvent, useUpdateEvent } from '../../hooks/useEvents';
 
 interface EventsViewProps {
   onAddEvent: () => void;
@@ -185,79 +185,69 @@ export const EventsView: React.FC<EventsViewProps> = ({
         </div>
 
         {/* Filter and Search Bar */}
-        <div className="admin-filters-bar">
-          {/* Search */}
-          <div className="admin-search-wrapper" style={{ flex: '1 1 200px' }}>
-            <Search size={16} className="search-icon" />
+        <div className="events-filters-bar">
+          {/* Search Input Box */}
+          <div className="events-search-box">
+            <Search size={16} className="events-search-icon" />
             <input
               type="text"
-              className="admin-search-input"
+              className="events-search-input"
               placeholder="Search by event title, venue, or city..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
-          {/* Status Filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>Status:</span>
-            <select
-              className="admin-filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="UPCOMING">Upcoming</option>
-              <option value="ONGOING">Ongoing</option>
-              <option value="DRAFT">Draft</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
+          {/* Select Filter Controls Row */}
+          <div className="events-filter-controls-row">
+            {/* Status Filter */}
+            <div className="events-filter-item">
+              <span className="events-filter-label">Status:</span>
+              <select
+                className="events-filter-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="UPCOMING">Upcoming</option>
+                <option value="ONGOING">Ongoing</option>
+                <option value="DRAFT">Draft</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
+
+            {/* City Filter */}
+            <div className="events-filter-item">
+              <span className="events-filter-label">City:</span>
+              <select
+                className="events-filter-select"
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+              >
+                <option value="ALL">All Cities</option>
+                {uniqueCities.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* City Filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>City:</span>
-            <select
-              className="admin-filter-select"
-              value={cityFilter}
-              onChange={(e) => setCityFilter(e.target.value)}
-            >
-              <option value="ALL">All Cities</option>
-              {uniqueCities.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Featured Filter */}
+          {/* Featured Filter Toggle Button */}
           <button
             type="button"
+            className={`events-featured-btn ${featuredOnly ? 'active' : ''}`}
             onClick={() => setFeaturedOnly(!featuredOnly)}
-            style={{
-              background: featuredOnly ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-              border: `1px solid ${featuredOnly ? '#f59e0b' : 'rgba(255, 255, 255, 0.1)'}`,
-              color: featuredOnly ? '#fbbf24' : '#cbd5e1',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              fontSize: '12.5px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: '0.15s'
-            }}
           >
-            <Sparkles size={14} />
+            <Sparkles size={15} />
             <span>Featured Only</span>
           </button>
         </div>
 
         {/* Content Area */}
-        <div style={{ padding: '16px' }}>
+        <div className="events-cards-content-area">
           {isLoading ? (
             <div style={{ padding: '60px', textAlign: 'center', color: '#94a3b8' }}>
               <Loader2 size={32} className="spin" style={{ margin: '0 auto 12px', color: '#ff1379' }} />

@@ -1,8 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import PartnerDashboard from './partner/PartnerDashboard';
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import AdminDashboard from './admin/AdminDashboard';
 import CreateEventScreen from './admin/CreateEventScreen';
 import { LegalPage } from './partner/LegalPage';
+import PartnerDashboard from './partner/PartnerDashboard';
 
 function AppRoutes() {
   const navigate = useNavigate();
