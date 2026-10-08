@@ -2744,12 +2744,13 @@
 
 .profile-carousel-container {
   position: relative;
-  height: 310px;
+  height: 320px;
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 14px;
   background: #0f172a;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
 }
 
 .profile-carousel-img {
@@ -2758,6 +2759,37 @@
   object-fit: cover;
   object-position: center;
   display: block;
+  transition: transform 0.3s ease;
+}
+
+.profile-carousel-container:hover .profile-carousel-img {
+  transform: scale(1.02);
+}
+
+.profile-zoom-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 4;
+  transition: all 0.2s ease;
+}
+
+.profile-zoom-badge:hover {
+  background: #ff1379;
+  border-color: #ff1379;
+  transform: scale(1.05);
 }
 
 .profile-carousel-nav-btn {
@@ -2793,13 +2825,6 @@
   right: 10px;
 }
 
-.profile-match-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 4;
-}
-
 .profile-rate-badge {
   position: absolute;
   bottom: 12px;
@@ -2814,6 +2839,128 @@
   border: 1px solid rgba(16, 185, 129, 0.4);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 4;
+}
+
+/* Full Screen Lightbox Modal */
+.profile-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.94);
+  backdrop-filter: blur(12px);
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: drawerFadeIn 0.2s ease-out;
+}
+
+.profile-lightbox-header {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #ffffff;
+  z-index: 10;
+}
+
+.profile-lightbox-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-lightbox-close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profile-lightbox-close-btn:hover {
+  background: #ff1379;
+  border-color: #ff1379;
+  transform: rotate(90deg);
+}
+
+.profile-lightbox-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 95vw;
+  max-height: 85vh;
+}
+
+.profile-lightbox-img {
+  max-width: 92vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+  display: block;
+}
+
+.profile-lightbox-nav-btn {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 20;
+}
+
+.profile-lightbox-nav-btn:hover {
+  background: #ff1379;
+  border-color: #ff1379;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.profile-lightbox-nav-btn.prev {
+  left: 20px;
+}
+
+.profile-lightbox-nav-btn.next {
+  right: 20px;
+}
+
+.profile-lightbox-footer {
+  position: absolute;
+  bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.75);
+  padding: 6px 16px;
+  border-radius: 20px;
+  color: #cbd5e1;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .profile-thumbnails-row {
