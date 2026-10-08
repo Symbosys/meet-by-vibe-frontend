@@ -42,8 +42,8 @@ export const UsersView: React.FC<UsersViewProps> = ({
   const deleteUserMutation = useDeleteUser();
   const toggleStatusMutation = useToggleUserStatus();
 
-  // All users from database (or filtered by selected role)
-  const users: AdminUser[] = data?.users || [];
+  // Exclude booking clients / customers from performer models directory
+  const users: AdminUser[] = (data?.users || []).filter((u) => u.role !== 'CUSTOMER');
 
   // Reset to page 1 whenever filters or page size change
   useEffect(() => {
@@ -123,9 +123,8 @@ export const UsersView: React.FC<UsersViewProps> = ({
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
           >
-            <option value="ALL">All Models / Users</option>
+            <option value="ALL">All Performer Models</option>
             <option value="PERFORMER">Performers & Models Only</option>
-            <option value="CUSTOMER">Customers Only</option>
             <option value="ORGANIZER">Organizers</option>
             <option value="ADMIN">Admins</option>
           </select>

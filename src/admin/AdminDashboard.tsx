@@ -30,7 +30,7 @@ export const AdminDashboard: React.FC = () => {
   const { data: bookingsData } = useBookings();
   const updateBookingMutation = useUpdateBookingStatus();
 
-  const userCount = usersData?.pagination?.total ?? usersData?.users?.length ?? 0;
+  const userCount = (usersData?.users || []).filter((u) => u.role !== 'CUSTOMER').length;
   const eventCount = eventsData?.data?.pagination?.total ?? eventsData?.data?.events?.length ?? 0;
   
   // Fallback to local bookings state if backend is initializing
