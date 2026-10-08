@@ -239,7 +239,7 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
                     {booking.performer?.name || 'Performer'}
                   </p>
                   <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>
-                    Rate: <strong style={{ color: '#ec4899' }}>₹{booking.hourlyRate}/hr</strong>
+                    Rate: <strong style={{ color: '#ec4899' }}>₹{booking.hourlyRate || booking.performer?.hourlyRate || 399}</strong>
                   </p>
                 </div>
               </div>
@@ -286,7 +286,7 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12.5px' }}>
                   <div>
-                    <span style={{ color: '#94a3b8' }}>Total Amount:</span> <strong style={{ color: '#10b981', fontSize: '16px' }}>₹{booking.totalAmount}</strong>
+                    <span style={{ color: '#94a3b8' }}>Total Amount:</span> <strong style={{ color: '#10b981', fontSize: '16px' }}>₹{booking.hourlyRate || booking.totalAmount || 399}</strong>
                   </div>
                   <div>
                     <span style={{ color: '#94a3b8' }}>Transaction Ref:</span> <span style={{ color: '#f8fafc', fontFamily: 'monospace' }}>{paymentObj?.transactionRef || 'N/A'}</span>

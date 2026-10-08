@@ -188,7 +188,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '14px' }}>₹{p.hourlyRate}/hr</div>
+                  <div style={{ fontWeight: 700, color: '#f59e0b', fontSize: '14px' }}>₹{p.hourlyRate || 399}</div>
                   <div style={{ fontSize: '11px', color: '#10b981' }}>⭐ {p.rating} ({p.totalBookingsDone} bookings)</div>
                 </div>
               </div>

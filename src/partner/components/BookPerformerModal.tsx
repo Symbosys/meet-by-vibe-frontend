@@ -80,7 +80,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const [notes, setNotes] = useState('');
 
   // Fixed Booking Fee
-  const bookingFee = 399;
+  const bookingFee = partner?.hourlyRate ? Number(partner.hourlyRate) : 399;
 
   // Payment state
   const [createdBookingId, setCreatedBookingId] = useState<string>('');

@@ -240,7 +240,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
       const formattedDate = bookingDateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 
       const utr = paymentObj?.utrNumber || (b as any).utrNumber || `UTR-${b.bookingCode}`;
-      const amount = b.totalAmount || (b.hourlyRate ? b.hourlyRate * b.durationHours : 1200);
+      const amount = b.hourlyRate || b.totalAmount || 399;
       const screenshot = paymentObj?.paymentScreenshotUrl || (b as any).paymentScreenshotUrl || (b as any).screenshotUrl || null;
 
       return {

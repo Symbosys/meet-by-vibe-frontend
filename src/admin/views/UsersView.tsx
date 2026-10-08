@@ -273,7 +273,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
                     {u.role === 'PERFORMER' ? (
                       <div>
                         <div style={{ fontWeight: 700, color: '#10b981', fontSize: '13.5px' }}>
-                          ₹{u.hourlyRate || 0}/hr
+                          ₹{u.hourlyRate || 399}
                         </div>
                         <div style={{ fontSize: '11px', color: '#38bdf8', fontFamily: 'monospace' }}>
                           {u.upiId || 'No UPI ID'}

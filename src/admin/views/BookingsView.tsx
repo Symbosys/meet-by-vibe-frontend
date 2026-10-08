@@ -168,7 +168,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                           {b.performer?.name || 'Artist'}
                         </div>
                         <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                          ₹{b.hourlyRate}/hour
+                          ₹{b.hourlyRate || 399}
                         </div>
                       </div>
                     </div>
@@ -193,7 +193,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                   {/* Total & QR Status */}
                   <td>
                     <div style={{ fontWeight: 700, color: '#10b981', fontSize: '15px' }}>
-                      ₹{b.totalAmount}
+                      ₹{b.hourlyRate || b.totalAmount || 399}
                     </div>
                     <div style={{ marginTop: '4px' }}>
                       <span className={`status-pill ${b.status}`}>{b.status}</span>
