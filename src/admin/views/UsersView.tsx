@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   UserPlus, 
   Search, 
@@ -9,7 +9,9 @@ import {
   XCircle,
   Loader2,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import type { AdminUser, Role, SkillLevel } from '../types/admin.types';
 import { useUsers, useDeleteUser, useToggleUserStatus } from '../../hooks/useUsers';
@@ -23,23 +25,38 @@ export const UsersView: React.FC<UsersViewProps> = ({
   onAddUser,
   onEditUser,
 }) => {
-  const [roleFilter, setRoleFilter] = useState<string>('PERFORMER');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [skillFilter, setSkillFilter] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
-  // TanStack Query to fetch users from backend (strictly models/performers)
+  // TanStack Query to fetch all users/models from backend
   const { data, isLoading, isError, error, refetch, isFetching } = useUsers({
     search: search || undefined,
-    role: (roleFilter !== 'ALL' ? (roleFilter as Role) : undefined) || 'PERFORMER',
+    role: roleFilter === 'ALL' ? undefined : (roleFilter as Role),
     skillLevel: skillFilter !== 'ALL' ? (skillFilter as SkillLevel) : undefined,
-    limit: 50,
+    limit: 100,
   });
 
   const deleteUserMutation = useDeleteUser();
   const toggleStatusMutation = useToggleUserStatus();
 
-  // Exclude regular booking customers from models view
-  const users: AdminUser[] = (data?.users || []).filter((u) => u.role !== 'CUSTOMER');
+  // All users from database (or filtered by selected role)
+  const users: AdminUser[] = data?.users || [];
+
+  // Reset to page 1 whenever filters or page size change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, roleFilter, skillFilter, pageSize]);
+
+  // Calculate pagination
+  const totalItems = users.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedUsers = users.slice(startIndex, endIndex);
 
   const handleDelete = async (user: AdminUser) => {
     if (confirm(`Are you sure you want to delete model/performer "${user.name}"? This action cannot be undone.`)) {
@@ -106,8 +123,9 @@ export const UsersView: React.FC<UsersViewProps> = ({
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
           >
+            <option value="ALL">All Models / Users</option>
             <option value="PERFORMER">Performers & Models Only</option>
-            <option value="ALL">All Models</option>
+            <option value="CUSTOMER">Customers Only</option>
             <option value="ORGANIZER">Organizers</option>
             <option value="ADMIN">Admins</option>
           </select>
@@ -185,7 +203,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
                 </td>
               </tr>
             ) : (
-              users.map((u) => (
+              paginatedUsers.map((u) => (
                 <tr key={u.id}>
                   {/* User Profile */}
                   <td>
@@ -325,6 +343,81 @@ export const UsersView: React.FC<UsersViewProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Footer */}
+      {!isLoading && users.length > 0 && (
+        <div className="admin-pagination">
+          <div className="admin-pagination-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span>
+              Showing <strong style={{ color: '#fff' }}>{startIndex + 1}</strong> to{' '}
+              <strong style={{ color: '#fff' }}>{endIndex}</strong> of{' '}
+              <strong style={{ color: '#f59e0b' }}>{totalItems}</strong> models
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
+              <span style={{ color: '#94a3b8' }}>Per page:</span>
+              <select
+                className="admin-select"
+                style={{ padding: '3px 6px', fontSize: '12px' }}
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="admin-pagination-controls">
+            <button
+              className="admin-page-btn"
+              disabled={safeCurrentPage <= 1}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              title="Previous Page"
+            >
+              <ChevronLeft size={14} />
+              <span>Prev</span>
+            </button>
+
+            {/* Page number buttons */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((page) => {
+                // Show first, last, and pages near current
+                if (totalPages <= 7) return true;
+                if (page === 1 || page === totalPages) return true;
+                return Math.abs(page - safeCurrentPage) <= 1;
+              })
+              .map((page, idx, arr) => {
+                const showEllipsisBefore = idx > 0 && page - arr[idx - 1] > 1;
+                return (
+                  <React.Fragment key={page}>
+                    {showEllipsisBefore && (
+                      <span style={{ color: '#64748b', padding: '0 4px', fontSize: '12px' }}>...</span>
+                    )}
+                    <button
+                      className={`admin-page-btn ${page === safeCurrentPage ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+            <button
+              className="admin-page-btn"
+              disabled={safeCurrentPage >= totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              title="Next Page"
+            >
+              <span>Next</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
