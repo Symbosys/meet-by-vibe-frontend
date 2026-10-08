@@ -17,7 +17,6 @@ import { RecommendedPartnersSection } from './components/RecommendedPartnersSect
 import {
   CURRENT_USER,
   INITIAL_REQUESTS,
-  UPCOMING_EVENTS
 } from './data/partnerMockData';
 import './partner.css';
 import type { GarbaEvent, GarbaPartner, PartnerRequest } from './types/partner.types';
@@ -119,7 +118,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   });
 
   // Dynamic DB Events using TanStack Query
-  const { data: eventsData } = useEvents({
+  const { data: eventsData, isLoading: isEventsLoading } = useEvents({
     page: 1,
     limit: 50,
   });
@@ -134,20 +133,21 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   // Local state for event interactive actions (bookmark / RSVP)
   const [localEventState, setLocalEventState] = useState<Record<string, { isFavorite?: boolean; isJoined?: boolean }>>({});
 
-  // Dynamic Events: use real created events from DB, fallback to UPCOMING_EVENTS if none exist
+  // Dynamic Events: use real created events from DB without flashing static mock data
   const displayedEvents: GarbaEvent[] = useMemo(() => {
     const dbEvents = eventsData?.data?.events;
-    const baseEvents = (dbEvents && dbEvents.length > 0) ? dbEvents : UPCOMING_EVENTS;
-
-    return baseEvents.map((evt) => {
-      const override = localEventState[evt.id];
-      if (!override) return evt;
-      return {
-        ...evt,
-        ...(override.isFavorite !== undefined ? { isFavorite: override.isFavorite } : {}),
-        ...(override.isJoined !== undefined ? { isJoined: override.isJoined } : {}),
-      };
-    });
+    if (dbEvents && dbEvents.length > 0) {
+      return dbEvents.map((evt) => {
+        const override = localEventState[evt.id];
+        if (!override) return evt;
+        return {
+          ...evt,
+          ...(override.isFavorite !== undefined ? { isFavorite: override.isFavorite } : {}),
+          ...(override.isJoined !== undefined ? { isJoined: override.isJoined } : {}),
+        };
+      });
+    }
+    return [];
   }, [eventsData, localEventState]);
 
   const [requests, setRequests] = useState<PartnerRequest[]>(INITIAL_REQUESTS);
@@ -315,6 +315,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
         {/* Festive Hero Carousel with Real Admin Events */}
         <FestiveHeroBanner
           events={displayedEvents}
+          isLoading={isEventsLoading}
           onSelectEvent={handleViewEventDetails}
         />
 

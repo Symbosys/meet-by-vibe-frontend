@@ -1,14 +1,18 @@
 import { Calendar, Clock, MapPin, Sparkles } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
-import { HERO_BANNERS } from '../data/partnerMockData';
 import type { GarbaEvent } from '../types/partner.types';
 
 interface FestiveHeroBannerProps {
   events?: GarbaEvent[];
+  isLoading?: boolean;
   onSelectEvent?: (event: GarbaEvent) => void;
 }
 
-export const FestiveHeroBanner: React.FC<FestiveHeroBannerProps> = ({ events, onSelectEvent }) => {
+export const FestiveHeroBanner: React.FC<FestiveHeroBannerProps> = ({ 
+  events, 
+  isLoading = false,
+  onSelectEvent 
+}) => {
   const slides = useMemo(() => {
     if (events && events.length > 0) {
       return events.map((evt) => ({
@@ -28,18 +32,7 @@ export const FestiveHeroBanner: React.FC<FestiveHeroBannerProps> = ({ events, on
         eventObj: evt,
       }));
     }
-    return HERO_BANNERS.map((b) => ({
-      id: b.id,
-      imageUrl: b.imageUrl,
-      title: b.title,
-      subtitle: b.subtitle,
-      venueInfo: undefined,
-      dateInfo: undefined,
-      timeInfo: undefined,
-      priceInfo: undefined,
-      tag: 'Grand Navratri Partner Match 2026',
-      eventObj: undefined,
-    }));
+    return [];
   }, [events]);
 
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -54,6 +47,45 @@ export const FestiveHeroBanner: React.FC<FestiveHeroBannerProps> = ({ events, on
 
     return () => clearInterval(timer);
   }, [slides.length, isPaused]);
+
+  // Loading skeleton state (prevents flashing static mock data on refresh)
+  if (isLoading || (events === undefined && slides.length === 0)) {
+    return (
+      <section className="partner-hero-section">
+        <div className="partner-hero-banner partner-hero-banner-skeleton">
+          <div className="partner-hero-skeleton-shimmer" />
+          <div className="partner-hero-overlay">
+            <div className="partner-hero-skeleton-tag" />
+            <div className="partner-hero-skeleton-title" />
+            <div className="partner-hero-skeleton-subtitle" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // If not loading and no events in DB
+  if (slides.length === 0) {
+    return (
+      <section className="partner-hero-section">
+        <div className="partner-hero-banner">
+          <img
+            src="https://images.unsplash.com/photo-1600096194534-95cf5ece04cf?w=1600&q=80"
+            alt="Grand Navratri Garba 2026"
+            className="partner-hero-banner-img"
+          />
+          <div className="partner-hero-overlay">
+            <div className="partner-hero-tag">
+              <Sparkles size={14} />
+              <span>Grand Navratri Garba 2026</span>
+            </div>
+            <h1 className="partner-hero-title">Grand Navratri Garba Mahotsav 2026</h1>
+            <p className="partner-hero-subtitle">Experience 9 nights of divine devotion, Dodhiya & Dandiya Raas with verified partners.</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   // Handle slide index bounds safety
   const safeIndex = currentSlide < slides.length ? currentSlide : 0;
@@ -135,3 +167,4 @@ export const FestiveHeroBanner: React.FC<FestiveHeroBannerProps> = ({ events, on
 };
 
 export default FestiveHeroBanner;
+
