@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-route
 import PartnerDashboard from './partner/PartnerDashboard';
 import AdminDashboard from './admin/AdminDashboard';
 import CreateEventScreen from './admin/CreateEventScreen';
+import { LegalPage } from './partner/LegalPage';
 
 function AppRoutes() {
   const navigate = useNavigate();
@@ -13,6 +14,12 @@ function AppRoutes() {
         path="/"
         element={<PartnerDashboard onSwitchToAdmin={() => navigate('/admin')} />}
       />
+
+      {/* Legal Routes: Privacy Policy & Terms of Service */}
+      <Route path="/privacy" element={<LegalPage />} />
+      <Route path="/privacy-policy" element={<LegalPage />} />
+      <Route path="/terms" element={<LegalPage />} />
+      <Route path="/terms-of-service" element={<LegalPage />} />
 
       {/* Direct Event Creation Screen (Matching Exact UI) */}
       <Route

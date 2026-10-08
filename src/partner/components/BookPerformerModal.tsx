@@ -49,14 +49,14 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const [step, setStep] = useState<'form' | 'payment' | 'success'>('form');
 
   // Booker / Client Details matching Prisma schema
-  const [name, setName] = useState('Aarohi Sen');
-  const [email, setEmail] = useState('aarohi.sen@example.com');
-  const [phone, setPhone] = useState('+91 98765 43210');
-  const [address, setAddress] = useState('Flat 402, Royal Residency, Kanke Road');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [gender, setGender] = useState<Gender>('FEMALE');
 
   // Client Profile Picture Dynamic State with <= 100 KB compression
-  const [avatarUrl, setAvatarUrl] = useState<string>('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80');
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isCompressingAvatar, setIsCompressingAvatar] = useState<boolean>(false);
   const [compressedSizeKB, setCompressedSizeKB] = useState<number | null>(null);
@@ -75,9 +75,9 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const [startTime, setStartTime] = useState('19:00');
   const [endTime, setEndTime] = useState('23:00');
   const [durationHours, setDurationHours] = useState(4);
-  const [eventAddress, setEventAddress] = useState(events[0]?.venue || 'GMDC Ground, Helmet Cross Roads');
-  const [city, setCity] = useState(partner?.city || 'Ahmedabad');
-  const [notes, setNotes] = useState('Looking for synchronized couple round and Dodhiya steps choreography.');
+  const [eventAddress, setEventAddress] = useState(events[0]?.venue || '');
+  const [city, setCity] = useState(partner?.city || '');
+  const [notes, setNotes] = useState('');
 
   // Fixed Booking Fee
   const bookingFee = 399;
@@ -105,6 +105,14 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       setProofPreviewUrl('');
       setProofCompressedSizeKB(null);
       setProofOriginalSizeKB(null);
+      setName('');
+      setEmail('');
+      setPhone('');
+      setAddress('');
+      setAvatarUrl('');
+      setAvatarFile(null);
+      setCompressedSizeKB(null);
+      setNotes('');
       if (partner) {
         setCity(partner.city);
       }
@@ -170,26 +178,15 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const handleRemovePhoto = () => {
     setAvatarFile(null);
     setCompressedSizeKB(null);
-    setAvatarUrl(
-      gender === 'MALE'
-        ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80'
-        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
-    );
+    setAvatarUrl('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // Switch gender and auto-select matching default festive avatar
+  // Switch gender
   const handleGenderChange = (newGender: Gender) => {
     setGender(newGender);
-    if (!avatarFile) {
-      if (newGender === 'MALE') {
-        setAvatarUrl('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&q=80');
-      } else if (newGender === 'FEMALE') {
-        setAvatarUrl('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80');
-      }
-    }
   };
 
   // Handle Payment Screenshot Upload with strict <= 100 KB auto-compression
@@ -448,14 +445,20 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                     <div 
                       className="book-avatar-preview-wrap"
                       onClick={() => !isCompressingAvatar && fileInputRef.current?.click()}
-                      title="Click to change profile picture"
+                      title="Click to upload profile photo / selfie"
                     >
-                      <img
-                        src={avatarUrl}
-                        alt="Client Profile"
-                        className="book-avatar-preview-img"
-                        style={{ opacity: isCompressingAvatar ? 0.5 : 1 }}
-                      />
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt="Client Profile"
+                          className="book-avatar-preview-img"
+                          style={{ opacity: isCompressingAvatar ? 0.5 : 1 }}
+                        />
+                      ) : (
+                        <div className="book-avatar-placeholder-box">
+                          <User size={26} color="#94a3b8" />
+                        </div>
+                      )}
                       <div className="book-avatar-camera-badge">
                         {isCompressingAvatar ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
                       </div>
@@ -524,6 +527,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       type="text"
                       className="book-input"
                       required
+                      placeholder="Enter your full name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
@@ -554,6 +558,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       type="email"
                       className="book-input"
                       required
+                      placeholder="e.g. name@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
@@ -564,9 +569,10 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       Contact Phone *
                     </label>
                     <input
-                      type="text"
+                      type="tel"
                       className="book-input"
                       required
+                      placeholder="e.g. +91 98765 43210"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                     />
@@ -581,6 +587,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                     type="text"
                     className="book-input"
                     required
+                    placeholder="Enter flat / house no., street, locality"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                   />

@@ -9,7 +9,6 @@ import {
     MapPin,
     Menu,
     Search,
-    Sparkles,
     Users,
     X
 } from 'lucide-react';
@@ -97,11 +96,12 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
               setIsMobileDrawerOpen(false);
             }}
           >
-            <div className="partner-brand-logo-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+            <div className="partner-brand-logo-wrap">
+              <img 
+                src="/MeetByVibe_logo.png" 
+                alt="MeetByVibe Logo" 
+                className="partner-brand-logo-img" 
+              />
             </div>
             <div className="partner-brand-text">
               <div className="partner-brand-name">
@@ -225,9 +225,11 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
             {/* Sidebar Header */}
             <div className="partner-mobile-drawer-header">
               <div className="partner-drawer-brand">
-                <div className="partner-brand-logo-icon" style={{ width: '26px', height: '26px', borderRadius: '8px' }}>
-                  <Sparkles size={14} color="#ffffff" />
-                </div>
+                <img 
+                  src="/MeetByVibe_logo.png" 
+                  alt="MeetByVibe Logo" 
+                  className="partner-drawer-logo-img" 
+                />
                 <span className="partner-drawer-brand-name">
                   MeetBy<span style={{ color: 'var(--gm-primary)' }}>Vibe</span>
                 </span>

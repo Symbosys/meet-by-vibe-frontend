@@ -1,12 +1,12 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface PartnerFooterProps {
-  selectedCity: string;
+  selectedCity?: string;
   onNavigateSection?: (section: string) => void;
 }
 
-export const PartnerFooter: React.FC<PartnerFooterProps> = ({ selectedCity, onNavigateSection }) => {
+export const PartnerFooter: React.FC<PartnerFooterProps> = () => {
   return (
     <footer className="partner-footer">
       <div className="partner-container">
@@ -15,11 +15,12 @@ export const PartnerFooter: React.FC<PartnerFooterProps> = ({ selectedCity, onNa
           {/* Brand Info Left */}
           <div className="partner-footer-brand">
             <div className="partner-footer-brand-logo">
-              <div className="partner-brand-logo-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
+              <div className="partner-brand-logo-wrap" style={{ background: '#ffffff', border: '1.5px solid #ff1379' }}>
+                <img 
+                  src="/MeetByVibe_logo.png" 
+                  alt="MeetByVibe Logo" 
+                  className="partner-brand-logo-img" 
+                />
               </div>
               <div className="partner-brand-text">
                 <div className="partner-brand-name" style={{ color: '#ffffff' }}>
@@ -41,74 +42,20 @@ export const PartnerFooter: React.FC<PartnerFooterProps> = ({ selectedCity, onNa
             </div>
           </div>
 
-          {/* Col 1: Product & Match */}
-          <div className="partner-footer-col">
-            <h4>Product & Match</h4>
-            <ul className="partner-footer-links">
-              <li>
-                <a href="#partners" className="partner-footer-link" onClick={() => onNavigateSection?.('partners')}>
-                  <Sparkles size={12} color="#ff1379" />
-                  <span>Find Partner</span>
-                </a>
-              </li>
-              <li>
-                <a href="#events" className="partner-footer-link" onClick={() => onNavigateSection?.('events')}>
-                  Upcoming Events
-                </a>
-              </li>
-              <li>
-                <a href="#groups" className="partner-footer-link">
-                  Garba Squad Groups
-                </a>
-              </li>
-              <li>
-                <a href="#cities" className="partner-footer-link">
-                  All 15 Cities
-                </a>
-              </li>
-              <li>
-                <a href="#hub" className="partner-footer-link">
-                  {selectedCity} Garba Hub
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Col 2: Company */}
-          <div className="partner-footer-col">
-            <h4>Company</h4>
-            <ul className="partner-footer-links">
-              <li>
-                <a href="#about" className="partner-footer-link">
-                  About GarbaMitra
-                </a>
-              </li>
-              <li>
-                <a href="#contact" className="partner-footer-link highlight">
-                  Contact & Support
-                </a>
-              </li>
-              <li>
-                <a href="#faqs" className="partner-footer-link">
-                  FAQs
-                </a>
-              </li>
-            </ul>
-          </div>
 
           {/* Col 3: Legal */}
           <div className="partner-footer-col">
             <h4>Legal</h4>
             <ul className="partner-footer-links">
               <li>
-                <a href="#privacy" className="partner-footer-link">
+                <Link to="/privacy-policy" className="partner-footer-link">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#terms" className="partner-footer-link">
+                <Link to="/terms-of-service" className="partner-footer-link">
                   Terms of Service
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
