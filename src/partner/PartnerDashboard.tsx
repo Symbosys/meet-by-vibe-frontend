@@ -112,9 +112,8 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [favoritePartnerIds, setFavoritePartnerIds] = useState<Set<string>>(new Set());
 
-  // Dynamic DB Data using TanStack Query - strictly fetch PERFORMER models
+  // Dynamic DB Data using TanStack Query - fetch all model users from DB
   const { data: usersData, isLoading: isUsersLoading } = useUsers({
-    role: 'PERFORMER',
     page: 1,
     limit: 100,
   });
@@ -128,7 +127,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   const dynamicPartners: GarbaPartner[] = useMemo(() => {
     if (!usersData?.users || usersData.users.length === 0) return [];
     return usersData.users
-      .filter((u) => u.role === 'PERFORMER')
+      .filter((u) => u.role !== 'ADMIN')
       .map((u) => mapAdminUserToPartner(u, favoritePartnerIds));
   }, [usersData, favoritePartnerIds]);
 
