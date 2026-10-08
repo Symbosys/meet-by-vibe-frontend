@@ -76,24 +76,69 @@ export const UserModal: React.FC<UserModalProps> = ({
   const [galleryFiles, setGalleryFiles] = useState<{ [slotIndex: number]: File }>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const [styleInput, setStyleInput] = useState('');
+  // const [styleInput, setStyleInput] = useState('');
   const [avatarUrlInput, setAvatarUrlInput] = useState('');
   const [showAvatarUrlMode, setShowAvatarUrlMode] = useState(false);
 
+  // Drag & drop state trackers
+  const [isDraggingAvatar, setIsDraggingAvatar] = useState(false);
+  const [isDraggingGallery, setIsDraggingGallery] = useState(false);
+  const [dragOverSlotIndex, setDragOverSlotIndex] = useState<number | null>(null);
+  const [draggedPhotoIndex, setDraggedPhotoIndex] = useState<number | null>(null);
+
+  // Helper to parse dance styles safely
+  const parseDanceStyles = (val: any): string[] => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {
+        return val.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+    }
+    return ['Traditional Garba', 'Dodhiya'];
+  };
+
+  const safeDateOfBirth = (dob: any): string => {
+    if (!dob) return '2000-01-15';
+    if (typeof dob === 'string') return dob.includes('T') ? dob.split('T')[0] : dob;
+    try {
+      return new Date(dob).toISOString().split('T')[0];
+    } catch {
+      return '2000-01-15';
+    }
+  };
+
   // country-state-city Indian states and cities integration
-  const indianStates = useMemo(() => State.getStatesOfCountry('IN'), []);
+  const indianStates = useMemo(() => {
+    try {
+      const states = State.getStatesOfCountry('IN');
+      return Array.isArray(states) ? states : [];
+    } catch {
+      return [];
+    }
+  }, []);
   
   const selectedStateObj = useMemo(() => {
+    if (!indianStates || indianStates.length === 0) return null;
+    const currentState = String(formData.state || '').toLowerCase().trim();
     return (
-      indianStates.find((s) => s.name.toLowerCase() === (formData.state || '').toLowerCase()) ||
-      indianStates.find((s) => s.isoCode === 'GJ') ||
-      indianStates[0]
+      indianStates.find((s) => String(s?.name || '').toLowerCase().trim() === currentState) ||
+      indianStates.find((s) => s?.isoCode === 'GJ') ||
+      indianStates[0] ||
+      null
     );
   }, [indianStates, formData.state]);
 
   const citiesOfSelectedState = useMemo(() => {
-    if (!selectedStateObj) return [];
-    return City.getCitiesOfState('IN', selectedStateObj.isoCode);
+    if (!selectedStateObj?.isoCode) return [];
+    try {
+      const cities = City.getCitiesOfState('IN', selectedStateObj.isoCode);
+      return Array.isArray(cities) ? cities : [];
+    } catch {
+      return [];
+    }
   }, [selectedStateObj]);
 
   useEffect(() => {
@@ -104,7 +149,9 @@ export const UserModal: React.FC<UserModalProps> = ({
     if (user) {
       setFormData({
         ...user,
-        dateOfBirth: user.dateOfBirth ? user.dateOfBirth.split('T')[0] : '2000-01-15'
+        dateOfBirth: safeDateOfBirth(user.dateOfBirth),
+        danceStyles: parseDanceStyles(user.danceStyles),
+        photos: Array.isArray(user.photos) ? user.photos : []
       });
       setAvatarUrlInput(user.avatarUrl || '');
     } else {
@@ -136,8 +183,6 @@ export const UserModal: React.FC<UserModalProps> = ({
       setAvatarUrlInput('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400');
     }
   }, [user, isOpen]);
-
-  if (!isOpen) return null;
 
   const isSubmitting = createUserMutation.isPending || updateUserMutation.isPending || uploadPhotosMutation.isPending;
 
@@ -205,12 +250,6 @@ export const UserModal: React.FC<UserModalProps> = ({
       setErrorMessage(err.message || 'Failed to save user model. Please check the form.');
     }
   };
-
-  // Drag & drop state trackers
-  const [isDraggingAvatar, setIsDraggingAvatar] = useState(false);
-  const [isDraggingGallery, setIsDraggingGallery] = useState(false);
-  const [dragOverSlotIndex, setDragOverSlotIndex] = useState<number | null>(null);
-  const [draggedPhotoIndex, setDraggedPhotoIndex] = useState<number | null>(null);
 
   // Core image processors
   const processAvatarFile = async (file: File) => {
@@ -367,9 +406,10 @@ export const UserModal: React.FC<UserModalProps> = ({
     });
   };
 
+  /*
   const addDanceStyle = () => {
     if (!styleInput.trim()) return;
-    const currentStyles = formData.danceStyles || [];
+    const currentStyles = Array.isArray(formData.danceStyles) ? formData.danceStyles : [];
     if (!currentStyles.includes(styleInput.trim())) {
       setFormData({ ...formData, danceStyles: [...currentStyles, styleInput.trim()] });
     }
@@ -377,13 +417,18 @@ export const UserModal: React.FC<UserModalProps> = ({
   };
 
   const removeDanceStyle = (style: string) => {
+    const currentStyles = Array.isArray(formData.danceStyles) ? formData.danceStyles : [];
     setFormData({
       ...formData,
-      danceStyles: (formData.danceStyles || []).filter(s => s !== style)
+      danceStyles: currentStyles.filter((s) => s !== style)
     });
   };
+  */
 
-  const uploadedPhotosCount = formData.photos?.length || 0;
+  const photosList = Array.isArray(formData.photos) ? formData.photos : [];
+  const uploadedPhotosCount = photosList.length;
+
+  if (!isOpen) return null;
 
   return (
     <div className="admin-modal-overlay" onClick={onClose}>
@@ -679,8 +724,8 @@ export const UserModal: React.FC<UserModalProps> = ({
                 gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))',
                 gap: '12px'
               }}>
-                {Array.from({ length: Math.max(5, (formData.photos?.length || 0)) }).map((_, index) => {
-                  const photo = formData.photos?.[index];
+                {Array.from({ length: Math.max(5, photosList.length) }).map((_, index) => {
+                  const photo = photosList[index];
                   const label = PHOTO_SLOT_LABELS[index] || `Photo ${index + 1}`;
                   const isSlotActiveDrag = dragOverSlotIndex === index;
 
@@ -959,8 +1004,8 @@ export const UserModal: React.FC<UserModalProps> = ({
                   {citiesOfSelectedState.length === 0 ? (
                     <option value={formData.city || ''}>{formData.city || 'No city available'}</option>
                   ) : (
-                    citiesOfSelectedState.map((ct) => (
-                      <option key={ct.name} value={ct.name}>
+                    citiesOfSelectedState.map((ct, idx) => (
+                      <option key={`${ct.name}-${idx}`} value={ct.name}>
                         {ct.name}
                       </option>
                     ))
@@ -1025,6 +1070,8 @@ export const UserModal: React.FC<UserModalProps> = ({
                   </div>
                 </div>
 
+                {/* UPI ID & Instagram Handle fields commented out as requested */}
+                {/*
                 <div className="admin-form-row">
                   <div className="admin-form-group">
                     <label>UPI ID (For Payout Settlement)</label>
@@ -1048,7 +1095,10 @@ export const UserModal: React.FC<UserModalProps> = ({
                     />
                   </div>
                 </div>
+                */}
 
+                {/* Dance Styles field commented out as requested */}
+                {/*
                 <div className="admin-form-group">
                   <label>Dance Styles</label>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -1065,7 +1115,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                   </div>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {(formData.danceStyles || []).map((style) => (
+                    {danceStylesList.map((style) => (
                       <span
                         key={style}
                         style={{
@@ -1086,7 +1136,10 @@ export const UserModal: React.FC<UserModalProps> = ({
                     ))}
                   </div>
                 </div>
+                */}
 
+                {/* Bio / About field commented out as requested */}
+                {/*
                 <div className="admin-form-group">
                   <label>Bio / About</label>
                   <textarea
@@ -1097,6 +1150,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                   />
                 </div>
+                */}
               </>
             )}
 
