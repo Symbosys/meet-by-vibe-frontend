@@ -409,7 +409,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       {partner.name}, {partner.age}
                     </div>
                     <div className="book-performer-sub">
-                      📍 {partner.city} • ⚡ {partner.matchScore}% Match • 👑 {partner.mySkill}
+                      📍 {partner.city} • 👑 {partner.mySkill}
                     </div>
                   </div>
                 </div>

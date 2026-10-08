@@ -1,6 +1,5 @@
 import React from 'react';
 import { 
-  Heart, 
   CheckCircle, 
   MapPin, 
   Crown, 
@@ -15,14 +14,13 @@ interface PartnerCardProps {
   partner: GarbaPartner;
   onOpenProfile: (partner: GarbaPartner) => void;
   onBookPartner: (partner: GarbaPartner) => void;
-  onToggleFavorite: (partnerId: string) => void;
+  onToggleFavorite?: (partnerId: string) => void;
 }
 
 export const PartnerCard: React.FC<PartnerCardProps> = ({
   partner,
   onOpenProfile,
   onBookPartner,
-  onToggleFavorite,
 }) => {
   const getTagClass = (tag: string) => {
     switch (tag) {
@@ -47,28 +45,8 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({
           style={{ cursor: 'pointer' }}
         />
 
-        {/* Match Percentage Badge */}
-        <div className="partner-match-badge">
-          <span>⚡</span>
-          <span>{partner.matchScore}% Match</span>
-        </div>
-
-        {/* Heart Favorite Button */}
-        <button
-          className="partner-card-heart-btn"
-          onClick={() => onToggleFavorite(partner.id)}
-          title="Save Partner"
-        >
-          <Heart size={16} fill={partner.isFavorite ? '#ff1379' : 'none'} />
-        </button>
-
         {/* Bottom floating status tags */}
-        <div className="partner-card-media-bottom">
-          <div className="partner-online-badge">
-            <span className="partner-online-dot" />
-            <span>{partner.isOnline ? 'Online' : 'Recent'}</span>
-          </div>
-
+        <div className="partner-card-media-bottom" style={{ justifyContent: 'flex-end' }}>
           <div
             className="partner-photos-count-badge"
             onClick={(e) => {
@@ -103,7 +81,7 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({
           </span>
         </div>
 
-        {/* City Location & Hourly Rate */}
+        {/* City Location & Booking Rate */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <div className="partner-card-location" style={{ marginBottom: 0 }}>
             <MapPin size={13} />
@@ -111,7 +89,7 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({
           </div>
 
           <div style={{ fontSize: '13px', fontWeight: 800, color: '#10b981' }}>
-            ₹{partner.hourlyRate || 1200}/hr
+            ₹{partner.hourlyRate || 399}
           </div>
         </div>
 

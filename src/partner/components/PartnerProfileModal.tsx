@@ -82,12 +82,6 @@ export const PartnerProfileModal: React.FC<PartnerProfileModalProps> = ({
               </>
             )}
 
-            {/* Match Badge */}
-            <div className="partner-match-badge profile-match-badge">
-              <span>⚡</span>
-              <span>{partner.matchScore}% Match Score</span>
-            </div>
-
             {/* Rate Float Badge */}
             <div className="profile-rate-badge">
               ₹{partner.hourlyRate || 399}

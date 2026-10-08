@@ -75,7 +75,7 @@ export const RequestPartnerModal: React.FC<RequestPartnerModalProps> = ({
                     {partner.name}, {partner.age}
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
-                    📍 {partner.city} • ⚡ {partner.matchScore}% Match
+                    📍 {partner.city}
                   </div>
                 </div>
               </div>
