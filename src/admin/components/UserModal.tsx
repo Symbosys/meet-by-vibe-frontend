@@ -251,9 +251,151 @@ export const UserModal: React.FC<UserModalProps> = ({
     }
   };
 
+  // Drag counter refs to prevent child-element dragleave flickering in Chrome/Safari/Firefox
+  const avatarDragCounter = useRef(0);
+  const galleryDragCounter = useRef(0);
+  const slotDragCounters = useRef<{ [key: number]: number }>({});
+
+  // Helper to validate image file cross-browser
+  const isImageFile = (file: File): boolean => {
+    if (!file) return false;
+    if (file.type && file.type.startsWith('image/')) return true;
+    const ext = file.name?.split('.').pop()?.toLowerCase() || '';
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'jfif', 'bmp', 'heic', 'avif'].includes(ext);
+  };
+
+  // Helper to convert a Web Image URL (e.g. from Pinterest / Unsplash) into a local compressed File
+  const urlToFile = async (url: string, filename = 'web-image.jpg'): Promise<File | null> => {
+    try {
+      const res = await fetch(url, { mode: 'cors' });
+      if (res.ok) {
+        const blob = await res.blob();
+        return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+      }
+    } catch {
+      // CORS or network error, fallback to canvas or direct URL
+    }
+
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load web image'));
+        img.src = url;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width || 600;
+      canvas.height = img.naturalHeight || img.height || 600;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        const byteString = atob(dataUrl.split(',')[1]);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        return new File([new Blob([ab], { type: 'image/jpeg' })], filename, { type: 'image/jpeg' });
+      }
+    } catch {
+      // Canvas tainted or blocked
+    }
+
+    return null;
+  };
+
+  // Helper to extract local Files and web image URLs from DragEvent (Pinterest, Google Images, desktop files)
+  const extractFilesAndUrlsFromDragEvent = (e: React.DragEvent): { files: File[]; imageUrls: string[] } => {
+    const files: File[] = [];
+    const imageUrls: string[] = [];
+    const dt = e.dataTransfer;
+    if (!dt) return { files, imageUrls };
+
+    // 1. Check dt.items for local File objects
+    if (dt.items && dt.items.length > 0) {
+      for (let i = 0; i < dt.items.length; i++) {
+        const item = dt.items[i];
+        if (item.kind === 'file') {
+          const file = item.getAsFile();
+          if (file && isImageFile(file)) {
+            files.push(file);
+          }
+        }
+      }
+    }
+
+    // 2. Fallback to dt.files if items produced no files
+    if (files.length === 0 && dt.files && dt.files.length > 0) {
+      for (let i = 0; i < dt.files.length; i++) {
+        const file = dt.files[i];
+        if (file && isImageFile(file)) {
+          files.push(file);
+        }
+      }
+    }
+
+    // 3. If no local files were dragged, extract Web Image URLs (e.g. Pinterest, Google Images, Web pages)
+    if (files.length === 0) {
+      // A. Check HTML content for <img src="..."> tags
+      const html = dt.getData('text/html');
+      if (html) {
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const imgs = doc.querySelectorAll('img');
+          imgs.forEach((img) => {
+            const src = img.getAttribute('src') || img.getAttribute('data-src') || img.src;
+            if (src && (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:image/'))) {
+              // Convert Pinterest thumbnail URLs to high-resolution (736x)
+              const highRes = src.replace(/\/(?:236x|474x|564x)\//, '/736x/');
+              if (!imageUrls.includes(highRes)) {
+                imageUrls.push(highRes);
+              }
+            }
+          });
+        } catch (err) {
+          console.warn('Could not parse drag HTML:', err);
+        }
+      }
+
+      // B. Check text/uri-list
+      const uriList = dt.getData('text/uri-list');
+      if (uriList) {
+        const lines = uriList.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+        for (const line of lines) {
+          if (line.startsWith('http://') || line.startsWith('https://') || line.startsWith('data:image/')) {
+            const highRes = line.replace(/\/(?:236x|474x|564x)\//, '/736x/');
+            if (!imageUrls.includes(highRes)) {
+              imageUrls.push(highRes);
+            }
+          }
+        }
+      }
+
+      // C. Check text/plain or URL
+      const plainText = dt.getData('text/plain') || dt.getData('URL');
+      if (plainText) {
+        const match =
+          plainText.match(/https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg|png|webp|gif|svg|jfif|bmp|avif)(?:\?[^\s"'<>]*)?/i) ||
+          plainText.match(/https?:\/\/[^\s"'<>]+/i);
+        if (match) {
+          const url = match[0].replace(/\/(?:236x|474x|564x)\//, '/736x/');
+          if (!imageUrls.includes(url)) {
+            imageUrls.push(url);
+          }
+        }
+      }
+    }
+
+    return { files, imageUrls };
+  };
+
   // Core image processors
   const processAvatarFile = async (file: File) => {
-    if (!file || !file.type.startsWith('image/')) {
+    if (!file || !isImageFile(file)) {
       setErrorMessage('Please select a valid image file (PNG, JPG, JPEG, WEBP).');
       return;
     }
@@ -265,11 +407,35 @@ export const UserModal: React.FC<UserModalProps> = ({
     } catch (err) {
       console.error('Avatar compression failed, falling back:', err);
       setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setFormData((prev) => ({ ...prev, avatarUrl: dataUrl }));
+        setAvatarUrlInput(dataUrl);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
+  const processAvatarUrl = async (url: string) => {
+    try {
+      const file = await urlToFile(url, 'pinterest-avatar.jpg');
+      if (file) {
+        await processAvatarFile(file);
+        return;
+      }
+    } catch (err) {
+      console.warn('URL to file conversion error:', err);
+    }
+
+    // Direct URL Fallback (works with any Pinterest / web image)
+    setAvatarFile(null);
+    setFormData((prev) => ({ ...prev, avatarUrl: url }));
+    setAvatarUrlInput(url);
+  };
+
   const processGalleryFiles = async (fileList: File[]) => {
-    const imageFiles = fileList.filter((f) => f.type.startsWith('image/'));
+    const imageFiles = fileList.filter(isImageFile);
     if (imageFiles.length === 0) {
       setErrorMessage('Please select valid image files.');
       return;
@@ -278,7 +444,18 @@ export const UserModal: React.FC<UserModalProps> = ({
     const currentPhotosCount = formData.photos?.length || 0;
     try {
       const compressedResults = await Promise.all(
-        imageFiles.map((file) => compressImage(file, file.name, { maxSizeKB: 95, maxWidthOrHeight: 900 }))
+        imageFiles.map(async (file) => {
+          try {
+            return await compressImage(file, file.name, { maxSizeKB: 95, maxWidthOrHeight: 900 });
+          } catch {
+            return new Promise<{ file: File; dataUrl: string }>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve({ file, dataUrl: e.target?.result as string });
+              reader.onerror = () => resolve({ file, dataUrl: URL.createObjectURL(file) });
+              reader.readAsDataURL(file);
+            });
+          }
+        })
       );
 
       const newFilesMap: { [key: number]: File } = { ...galleryFiles };
@@ -306,20 +483,83 @@ export const UserModal: React.FC<UserModalProps> = ({
     }
   };
 
+  const processGalleryUrls = async (urls: string[]) => {
+    const currentPhotosCount = formData.photos?.length || 0;
+    const newPhotos: UserPhoto[] = [];
+    const newFilesMap: { [key: number]: File } = { ...galleryFiles };
+
+    for (let i = 0; i < urls.length; i++) {
+      const url = urls[i];
+      const slotIdx = currentPhotosCount + i;
+      let file: File | null = null;
+      try {
+        file = await urlToFile(url, `pinterest-photo-${slotIdx + 1}.jpg`);
+      } catch {
+        file = null;
+      }
+
+      if (file) {
+        try {
+          const comp = await compressImage(file, file.name, { maxSizeKB: 95, maxWidthOrHeight: 900 });
+          newFilesMap[slotIdx] = comp.file;
+          newPhotos.push({
+            id: `p-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
+            userId: user?.id || 'temp',
+            imageUrl: comp.dataUrl,
+            caption: `Photo ${slotIdx + 1}`,
+            order: slotIdx
+          });
+          continue;
+        } catch {
+          // fallback
+        }
+      }
+
+      // If file conversion blocked by CORS, use Web URL directly
+      newPhotos.push({
+        id: `p-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
+        userId: user?.id || 'temp',
+        imageUrl: url,
+        caption: `Photo ${slotIdx + 1}`,
+        order: slotIdx
+      });
+    }
+
+    setGalleryFiles(newFilesMap);
+    setFormData((prev) => ({
+      ...prev,
+      photos: [...(prev.photos || []), ...newPhotos]
+    }));
+  };
+
   const processSlotFile = async (slotIndex: number, file: File) => {
-    if (!file || !file.type.startsWith('image/')) {
+    if (!file || !isImageFile(file)) {
       setErrorMessage('Please select a valid image file for this slot.');
       return;
     }
     try {
-      const compressed = await compressImage(file, file.name, { maxSizeKB: 95, maxWidthOrHeight: 900 });
-      setGalleryFiles((prev) => ({ ...prev, [slotIndex]: compressed.file }));
+      let compressedDataUrl = '';
+      let fileToSave = file;
+      try {
+        const compressed = await compressImage(file, file.name, { maxSizeKB: 95, maxWidthOrHeight: 900 });
+        fileToSave = compressed.file;
+        compressedDataUrl = compressed.dataUrl;
+      } catch {
+        compressedDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = () => resolve(URL.createObjectURL(file));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      setGalleryFiles((prev) => ({ ...prev, [slotIndex]: fileToSave }));
       setFormData((prev) => {
         const currentPhotos = [...(prev.photos || [])];
         const newPhoto: UserPhoto = {
           id: currentPhotos[slotIndex]?.id || `p-${Date.now()}-${slotIndex}`,
           userId: user?.id || 'temp',
-          imageUrl: compressed.dataUrl,
+          imageUrl: compressedDataUrl,
           caption: PHOTO_SLOT_LABELS[slotIndex] || `Photo ${slotIndex + 1}`,
           order: slotIndex
         };
@@ -330,7 +570,7 @@ export const UserModal: React.FC<UserModalProps> = ({
           currentPhotos.push(newPhoto);
         }
 
-        const avatarUrl = slotIndex === 0 && !prev.avatarUrl ? compressed.dataUrl : prev.avatarUrl;
+        const avatarUrl = slotIndex === 0 && !prev.avatarUrl ? compressedDataUrl : prev.avatarUrl;
 
         return {
           ...prev,
@@ -343,12 +583,62 @@ export const UserModal: React.FC<UserModalProps> = ({
     }
   };
 
+  const processSlotUrl = async (slotIndex: number, url: string) => {
+    let finalImageUrl = url;
+    let fileToSave: File | null = null;
+
+    try {
+      const file = await urlToFile(url, `pinterest-slot-${slotIndex + 1}.jpg`);
+      if (file) {
+        try {
+          const comp = await compressImage(file, file.name, { maxSizeKB: 95, maxWidthOrHeight: 900 });
+          fileToSave = comp.file;
+          finalImageUrl = comp.dataUrl;
+        } catch {
+          fileToSave = file;
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
+    if (fileToSave) {
+      setGalleryFiles((prev) => ({ ...prev, [slotIndex]: fileToSave! }));
+    }
+
+    setFormData((prev) => {
+      const currentPhotos = [...(prev.photos || [])];
+      const newPhoto: UserPhoto = {
+        id: currentPhotos[slotIndex]?.id || `p-${Date.now()}-${slotIndex}`,
+        userId: user?.id || 'temp',
+        imageUrl: finalImageUrl,
+        caption: PHOTO_SLOT_LABELS[slotIndex] || `Photo ${slotIndex + 1}`,
+        order: slotIndex
+      };
+
+      if (slotIndex < currentPhotos.length) {
+        currentPhotos[slotIndex] = newPhoto;
+      } else {
+        currentPhotos.push(newPhoto);
+      }
+
+      const avatarUrl = slotIndex === 0 && !prev.avatarUrl ? finalImageUrl : prev.avatarUrl;
+
+      return {
+        ...prev,
+        avatarUrl,
+        photos: currentPhotos
+      };
+    });
+  };
+
   // Avatar Image Upload via File Picker
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       await processAvatarFile(file);
     }
+    e.target.value = '';
   };
 
   // Upload Multiple Photos via File Picker
@@ -357,6 +647,7 @@ export const UserModal: React.FC<UserModalProps> = ({
     if (files && files.length > 0) {
       await processGalleryFiles(Array.from(files));
     }
+    e.target.value = '';
   };
 
   // Upload or replace image for a specific slot via File Picker
@@ -365,6 +656,7 @@ export const UserModal: React.FC<UserModalProps> = ({
     if (file) {
       await processSlotFile(slotIndex, file);
     }
+    e.target.value = '';
   };
 
   // Reorder existing photo items via Drag & Drop
@@ -431,8 +723,18 @@ export const UserModal: React.FC<UserModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="admin-modal-overlay" onClick={onClose}>
-      <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+    <div 
+      className="admin-modal-overlay" 
+      onClick={onClose}
+      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onDrop={(e) => { e.preventDefault(); e.stopPropagation(); }}
+    >
+      <div 
+        className="admin-modal" 
+        onClick={(e) => e.stopPropagation()}
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        onDrop={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      >
         <div className="admin-modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Sparkles size={20} color="#f59e0b" />
@@ -463,28 +765,47 @@ export const UserModal: React.FC<UserModalProps> = ({
               </div>
             )}
 
-            {/* Primary Display Avatar with Drag & Drop */}
+            {/* Primary Display Avatar with Cross-Browser Drag & Drop */}
             <div 
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                avatarDragCounter.current++;
+                if (avatarDragCounter.current === 1) {
+                  setIsDraggingAvatar(true);
+                }
+              }}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setIsDraggingAvatar(true);
+                e.dataTransfer.dropEffect = 'copy';
+                if (!isDraggingAvatar) {
+                  setIsDraggingAvatar(true);
+                }
               }}
               onDragLeave={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setIsDraggingAvatar(false);
+                avatarDragCounter.current--;
+                if (avatarDragCounter.current <= 0) {
+                  avatarDragCounter.current = 0;
+                  setIsDraggingAvatar(false);
+                }
               }}
               onDrop={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                avatarDragCounter.current = 0;
                 setIsDraggingAvatar(false);
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                  await processAvatarFile(e.dataTransfer.files[0]);
+                const { files, imageUrls } = extractFilesAndUrlsFromDragEvent(e);
+                if (files.length > 0) {
+                  await processAvatarFile(files[0]);
+                } else if (imageUrls.length > 0) {
+                  await processAvatarUrl(imageUrls[0]);
                 }
               }}
               style={{ 
-                background: isDraggingAvatar ? 'rgba(245, 158, 11, 0.12)' : 'rgba(15, 23, 42, 0.7)', 
+                background: isDraggingAvatar ? 'rgba(245, 158, 11, 0.15)' : 'rgba(15, 23, 42, 0.7)', 
                 padding: '16px', 
                 borderRadius: '10px', 
                 border: isDraggingAvatar ? '2px dashed #f59e0b' : '1px solid #334155',
@@ -514,7 +835,8 @@ export const UserModal: React.FC<UserModalProps> = ({
                     objectFit: 'cover',
                     border: isDraggingAvatar ? '3px solid #fbbf24' : '3px solid #f59e0b',
                     background: '#1e293b',
-                    display: 'block'
+                    display: 'block',
+                    pointerEvents: 'none'
                   }}
                 />
                 <div style={{
@@ -529,7 +851,8 @@ export const UserModal: React.FC<UserModalProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.4)'
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                  pointerEvents: 'none'
                 }}>
                   <Upload size={12} />
                 </div>
@@ -608,28 +931,47 @@ export const UserModal: React.FC<UserModalProps> = ({
               </div>
             </div>
 
-            {/* 5-Photo Gallery Upload Section with Full Drag & Drop */}
+            {/* 5-Photo Gallery Upload Section with Cross-Browser Drag & Drop */}
             <div 
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                galleryDragCounter.current++;
+                if (galleryDragCounter.current === 1) {
+                  setIsDraggingGallery(true);
+                }
+              }}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setIsDraggingGallery(true);
+                e.dataTransfer.dropEffect = 'copy';
+                if (!isDraggingGallery) {
+                  setIsDraggingGallery(true);
+                }
               }}
               onDragLeave={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setIsDraggingGallery(false);
+                galleryDragCounter.current--;
+                if (galleryDragCounter.current <= 0) {
+                  galleryDragCounter.current = 0;
+                  setIsDraggingGallery(false);
+                }
               }}
               onDrop={async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                galleryDragCounter.current = 0;
                 setIsDraggingGallery(false);
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                  await processGalleryFiles(Array.from(e.dataTransfer.files));
+                const { files, imageUrls } = extractFilesAndUrlsFromDragEvent(e);
+                if (files.length > 0) {
+                  await processGalleryFiles(files);
+                } else if (imageUrls.length > 0) {
+                  await processGalleryUrls(imageUrls);
                 }
               }}
               style={{
-                background: isDraggingGallery ? 'rgba(245, 158, 11, 0.08)' : 'rgba(15, 23, 42, 0.7)',
+                background: isDraggingGallery ? 'rgba(245, 158, 11, 0.12)' : 'rgba(15, 23, 42, 0.7)',
                 padding: '16px',
                 borderRadius: '10px',
                 border: isDraggingGallery ? '2px dashed #f59e0b' : '1px solid #334155',
@@ -684,7 +1026,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                 style={{
                   border: isDraggingGallery ? '2px dashed #f59e0b' : '1.5px dashed rgba(148, 163, 184, 0.3)',
                   borderRadius: '8px',
-                  background: isDraggingGallery ? 'rgba(245, 158, 11, 0.15)' : 'rgba(30, 41, 59, 0.5)',
+                  background: isDraggingGallery ? 'rgba(245, 158, 11, 0.2)' : 'rgba(30, 41, 59, 0.5)',
                   padding: '12px 16px',
                   textAlign: 'center',
                   marginBottom: '14px',
@@ -737,27 +1079,43 @@ export const UserModal: React.FC<UserModalProps> = ({
                         if (photo) {
                           setDraggedPhotoIndex(index);
                           e.dataTransfer.setData('text/plain', String(index));
+                          e.dataTransfer.effectAllowed = 'move';
                         }
                       }}
                       onDragEnd={() => {
                         setDraggedPhotoIndex(null);
                         setDragOverSlotIndex(null);
+                        slotDragCounters.current[index] = 0;
+                      }}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        slotDragCounters.current[index] = (slotDragCounters.current[index] || 0) + 1;
+                        setDragOverSlotIndex(index);
                       }}
                       onDragOver={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setDragOverSlotIndex(index);
+                        e.dataTransfer.dropEffect = draggedPhotoIndex !== null ? 'move' : 'copy';
+                        if (dragOverSlotIndex !== index) {
+                          setDragOverSlotIndex(index);
+                        }
                       }}
                       onDragLeave={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        if (dragOverSlotIndex === index) {
-                          setDragOverSlotIndex(null);
+                        slotDragCounters.current[index] = (slotDragCounters.current[index] || 0) - 1;
+                        if ((slotDragCounters.current[index] || 0) <= 0) {
+                          slotDragCounters.current[index] = 0;
+                          if (dragOverSlotIndex === index) {
+                            setDragOverSlotIndex(null);
+                          }
                         }
                       }}
                       onDrop={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        slotDragCounters.current[index] = 0;
                         setDragOverSlotIndex(null);
 
                         // Case 1: Reordering existing photo cards
@@ -767,15 +1125,16 @@ export const UserModal: React.FC<UserModalProps> = ({
                           return;
                         }
 
-                        // Case 2: Dropping file from desktop/explorer onto this specific slot
-                        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                          const droppedFiles = Array.from(e.dataTransfer.files);
-                          if (droppedFiles.length === 1) {
-                            await processSlotFile(index, droppedFiles[0]);
-                          } else {
-                            // Multiple files dropped onto slot - process all
-                            await processGalleryFiles(droppedFiles);
-                          }
+                        // Case 2: Dropping file or web image (Pinterest / Google) onto this specific slot
+                        const { files, imageUrls } = extractFilesAndUrlsFromDragEvent(e);
+                        if (files.length === 1) {
+                          await processSlotFile(index, files[0]);
+                        } else if (files.length > 1) {
+                          await processGalleryFiles(files);
+                        } else if (imageUrls.length === 1) {
+                          await processSlotUrl(index, imageUrls[0]);
+                        } else if (imageUrls.length > 1) {
+                          await processGalleryUrls(imageUrls);
                         }
                       }}
                       style={{
@@ -822,7 +1181,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                               pointerEvents: 'none'
                             }}
                           />
-                          <span style={{ fontSize: '10px', color: '#cbd5e1', marginTop: '4px', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
+                          <span style={{ fontSize: '10px', color: '#cbd5e1', marginTop: '4px', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', pointerEvents: 'none' }}>
                             {photo.caption || `Slot ${index + 1}`}
                           </span>
                           

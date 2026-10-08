@@ -1,33 +1,33 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Search, 
-  Upload, 
-  CheckCircle2, 
-  Trash2, 
-  Edit3, 
-  Eye, 
-  X, 
-  Check, 
-  AlertCircle, 
-  Calendar as CalendarIcon, 
-  Plus, 
-  ShieldCheck, 
-  Loader2, 
-  Copy,
-  QrCode
+import {
+    AlertCircle,
+    Calendar as CalendarIcon,
+    Check,
+    CheckCircle2,
+    Copy,
+    Edit3,
+    Eye,
+    Loader2,
+    Plus,
+    QrCode,
+    Search,
+    ShieldCheck,
+    Trash2,
+    Upload,
+    X
 } from 'lucide-react';
-import type { AdminBooking } from '../types/admin.types';
-import { 
-  useActiveQRCode, 
-  useAllQRCodes, 
-  useCreateQRCode, 
-  useUpdateQRCode, 
-  useSetPrimaryQRCode, 
-  useDeleteQRCode 
-} from '../../hooks/useQR';
+import React, { useEffect, useRef, useState } from 'react';
 import type { QRCodeData } from '../../api/qr.api';
 import { useUpdateBookingStatus } from '../../hooks/useBookings';
+import {
+    useActiveQRCode,
+    useAllQRCodes,
+    useCreateQRCode,
+    useDeleteQRCode,
+    useSetPrimaryQRCode,
+    useUpdateQRCode
+} from '../../hooks/useQR';
 import { compressImage } from '../../utils/imageCompression';
+import type { AdminBooking } from '../types/admin.types';
 
 interface PaymentsViewProps {
   bookings: AdminBooking[];
