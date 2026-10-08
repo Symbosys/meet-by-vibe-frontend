@@ -116,7 +116,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   const { data: usersData, isLoading: isUsersLoading } = useUsers({
     role: 'PERFORMER',
     page: 1,
-    limit: 50,
+    limit: 100,
   });
 
   // Dynamic DB Events using TanStack Query

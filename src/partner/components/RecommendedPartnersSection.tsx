@@ -1,5 +1,5 @@
-import { ChevronLeft, ChevronRight, UserX } from 'lucide-react';
-import React, { useState } from 'react';
+import { Loader2, Sparkles, UserX } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { GarbaPartner } from '../types/partner.types';
 import { PartnerCard } from './PartnerCard';
 
@@ -15,6 +15,9 @@ interface RecommendedPartnersSectionProps {
   onOpenGenderModal?: () => void;
 }
 
+const INITIAL_BATCH_SIZE = 8;
+const LOAD_MORE_STEP = 8;
+
 export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProps> = ({
   partners,
   isLoading = false,
@@ -25,31 +28,97 @@ export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProp
   onChangeGender,
   onOpenGenderModal,
 }) => {
-  const [startIndex, setStartIndex] = useState(0);
-  const itemsPerPage = 4;
+  const [visibleCount, setVisibleCount] = useState<number>(INITIAL_BATCH_SIZE);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
 
-  const handlePrev = () => {
-    setStartIndex((prev) => Math.max(0, prev - 1));
+  // Reset pagination when gender filter or partners list changes
+  useEffect(() => {
+    setVisibleCount(INITIAL_BATCH_SIZE);
+    setIsLoadingMore(false);
+  }, [selectedGender, partners]);
+
+  const totalPartners = partners.length;
+  const hasMore = visibleCount < totalPartners;
+  const visiblePartners = partners.slice(0, visibleCount);
+
+  // Infinite Scroll / Scroll-based pagination via IntersectionObserver
+  useEffect(() => {
+    if (!hasMore || isLoading || isLoadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting) {
+          setIsLoadingMore(true);
+          // Micro delay to ensure smooth scrolling animation & prevent abrupt jumps
+          setTimeout(() => {
+            setVisibleCount((prev) => Math.min(prev + LOAD_MORE_STEP, totalPartners));
+            setIsLoadingMore(false);
+          }, 350);
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px', // trigger 200px before reaching bottom
+        threshold: 0.1,
+      }
+    );
+
+    const el = loadMoreTriggerRef.current;
+    if (el) {
+      observer.observe(el);
+    }
+
+    return () => {
+      if (el) {
+        observer.unobserve(el);
+      }
+    };
+  }, [hasMore, isLoading, isLoadingMore, totalPartners]);
+
+  const handleManualLoadMore = () => {
+    if (!hasMore || isLoadingMore) return;
+    setIsLoadingMore(true);
+    setTimeout(() => {
+      setVisibleCount((prev) => Math.min(prev + LOAD_MORE_STEP, totalPartners));
+      setIsLoadingMore(false);
+    }, 250);
   };
-
-  const handleNext = () => {
-    setStartIndex((prev) => Math.min(Math.max(0, partners.length - itemsPerPage), prev + 1));
-  };
-
-  const visiblePartners = partners.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <section>
       {/* Section Header */}
       <div className="partner-section-header" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
         <div>
-          <h2 className="partner-section-title">
-            Recommended <span style={{ color: '#ff1379' }}>
-              {selectedGender === 'FEMALE' ? 'Female Performers' : selectedGender === 'MALE' ? 'Male Performers' : 'Performers & Partners'}
-            </span> for You ✨
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h2 className="partner-section-title" style={{ margin: 0 }}>
+              Recommended <span style={{ color: '#ff1379' }}>
+                {selectedGender === 'FEMALE' ? 'Female Performers' : selectedGender === 'MALE' ? 'Male Performers' : 'Performers & Partners'}
+              </span> for You ✨
+            </h2>
+
+            {totalPartners > 0 && !isLoading && (
+              <span style={{
+                fontSize: '11px',
+                background: '#fdf2f8',
+                color: '#db2777',
+                border: '1px solid #fbcfe8',
+                padding: '3px 10px',
+                borderRadius: '12px',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <Sparkles size={11} />
+                Showing {Math.min(visibleCount, totalPartners)} of {totalPartners}
+              </span>
+            )}
+          </div>
+          
           <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
-            Book verified dance choreographers and models matching your preference & schedule.
+            Scroll down to discover verified dancers & choreography models matching your preference.
           </p>
         </div>
 
@@ -131,34 +200,13 @@ export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProp
               )}
             </div>
           )}
-
-          <div className="partner-nav-arrows">
-            <button 
-              className="partner-round-arrow-btn" 
-              onClick={handlePrev}
-              disabled={startIndex === 0 || isLoading || partners.length <= itemsPerPage}
-              style={{ opacity: startIndex === 0 || partners.length <= itemsPerPage ? 0.4 : 1 }}
-              title="Previous performers"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button 
-              className="partner-round-arrow-btn" 
-              onClick={handleNext}
-              disabled={startIndex + itemsPerPage >= partners.length || isLoading || partners.length <= itemsPerPage}
-              style={{ opacity: startIndex + itemsPerPage >= partners.length || partners.length <= itemsPerPage ? 0.4 : 1 }}
-              title="Next performers"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Loading Skeleton */}
+      {/* Loading Initial Skeleton */}
       {isLoading ? (
         <div className="partner-cards-grid">
-          {[1, 2, 3, 4].map((idx) => (
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
             <div
               key={idx}
               style={{
@@ -180,7 +228,7 @@ export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProp
             </div>
           ))}
         </div>
-      ) : partners.length === 0 ? (
+      ) : totalPartners === 0 ? (
         /* Empty State */
         <div
           style={{
@@ -189,7 +237,8 @@ export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProp
             borderRadius: '20px',
             padding: '48px 24px',
             textAlign: 'center',
-            color: '#64748b'
+            color: '#64748b',
+            marginTop: '16px'
           }}
         >
           <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fdf2f8', color: '#ff1379', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
@@ -199,24 +248,116 @@ export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProp
             No Performers Found
           </h3>
           <p style={{ fontSize: '13px', maxWidth: '380px', margin: '0 auto', color: '#64748b' }}>
-            There are currently no active performers or dancers matching your selected search/city filters.
+            There are currently no active performers matching your selected search or gender filters.
           </p>
         </div>
       ) : (
-        /* Dynamic Cards Grid */
-        <div className="partner-cards-grid">
-          {visiblePartners.map((partner) => (
-            <PartnerCard
-              key={partner.id}
-              partner={partner}
-              onOpenProfile={onOpenProfile}
-              onBookPartner={onBookPartner}
-              onToggleFavorite={onToggleFavorite}
-            />
-          ))}
-        </div>
+        /* Dynamic Scrollable Cards Grid */
+        <>
+          <div className="partner-cards-grid" style={{ marginBottom: '24px' }}>
+            {visiblePartners.map((partner) => (
+              <PartnerCard
+                key={partner.id}
+                partner={partner}
+                onOpenProfile={onOpenProfile}
+                onBookPartner={onBookPartner}
+                onToggleFavorite={onToggleFavorite}
+              />
+            ))}
+          </div>
+
+          {/* Skeletons when loading next batch while scrolling */}
+          {isLoadingMore && (
+            <div className="partner-cards-grid" style={{ marginTop: '0', marginBottom: '24px' }}>
+              {[1, 2, 3, 4].map((idx) => (
+                <div
+                  key={`skeleton-${idx}`}
+                  style={{
+                    background: '#ffffff',
+                    borderRadius: '18px',
+                    border: '1px solid #e2e8f0',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    minHeight: '380px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                  }}
+                >
+                  <div style={{ width: '100%', height: '220px', borderRadius: '14px', background: '#f1f5f9', animation: 'pulse 1.5s infinite' }} />
+                  <div style={{ height: '20px', width: '60%', background: '#f1f5f9', borderRadius: '4px' }} />
+                  <div style={{ height: '14px', width: '40%', background: '#f1f5f9', borderRadius: '4px' }} />
+                  <div style={{ marginTop: 'auto', height: '40px', background: '#fce7f3', borderRadius: '8px' }} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Infinite Scroll Trigger Sentinel & Status Indicator */}
+          {hasMore ? (
+            <div
+              ref={loadMoreTriggerRef}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '24px 0 40px 0',
+                gap: '10px'
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleManualLoadMore}
+                disabled={isLoadingMore}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: '#ffffff',
+                  color: '#ff1379',
+                  border: '1.5px solid #fbcfe8',
+                  padding: '10px 24px',
+                  borderRadius: '30px',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(255, 19, 121, 0.08)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {isLoadingMore ? (
+                  <>
+                    <Loader2 size={16} className="spin" />
+                    <span>Loading more performers...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} />
+                    <span>Scroll down or click to load more</span>
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            /* Reached end of performers */
+            <div style={{
+              textAlign: 'center',
+              padding: '20px 0 48px 0',
+              color: '#94a3b8',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}>
+              <span style={{ height: '1px', width: '40px', background: '#e2e8f0' }} />
+              <span>✨ You've reached the end of verified performers</span>
+              <span style={{ height: '1px', width: '40px', background: '#e2e8f0' }} />
+            </div>
+          )}
+        </>
       )}
     </section>
   );
 };
-
