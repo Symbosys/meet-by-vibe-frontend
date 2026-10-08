@@ -24,6 +24,7 @@ import { useInitiateBooking, useSubmitPaymentProof } from '../../hooks/useBookin
 import { useActiveQRCode } from '../../hooks/useQR';
 import { compressImage } from '../../utils/imageCompression';
 import type { GarbaEvent, GarbaPartner } from '../types/partner.types';
+import { getPartnerAge } from '../utils/age.util';
 
 interface BookPerformerModalProps {
   partner: GarbaPartner | null;
@@ -406,7 +407,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                   />
                   <div className="book-performer-info">
                     <div className="book-performer-name">
-                      {partner.name}, {partner.age}
+                      {partner.name}, {partner.age || getPartnerAge(partner.id, partner.name)}
                     </div>
                     <div className="book-performer-sub">
                       📍 {partner.city} • 👑 {partner.mySkill}

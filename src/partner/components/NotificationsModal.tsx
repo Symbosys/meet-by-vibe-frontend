@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Bell, Check, Trash2 } from 'lucide-react';
 import type { PartnerRequest } from '../types/partner.types';
+import { getPartnerAge } from '../utils/age.util';
 
 interface NotificationsModalProps {
   requests: PartnerRequest[];
@@ -62,7 +63,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 800, fontSize: '14px', color: '#0f172a' }}>
-                        {req.sender.name}, {req.sender.age}
+                        {req.sender.name}, {req.sender.age || getPartnerAge(req.sender.id, req.sender.name)}
                       </div>
                       <div style={{ fontSize: '11px', color: '#64748b' }}>
                         For: <strong style={{ color: '#ff1379' }}>{req.eventName}</strong> • {req.sentAt}

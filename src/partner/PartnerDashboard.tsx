@@ -20,17 +20,12 @@ import {
 } from './data/partnerMockData';
 import './partner.css';
 import type { GarbaEvent, GarbaPartner, PartnerRequest } from './types/partner.types';
+import { getPartnerAge } from './utils/age.util';
 
 // Helper to map DB AdminUser directly to UI GarbaPartner
 function mapAdminUserToPartner(user: AdminUser, favoritePartnerIds: Set<string>): GarbaPartner {
-  let age = 24;
-  if (user.dateOfBirth) {
-    const dob = new Date(user.dateOfBirth);
-    if (!isNaN(dob.getTime())) {
-      const diffYears = Math.floor((Date.now() - dob.getTime()) / (365.25 * 24 * 3600 * 1000));
-      if (diffYears >= 16 && diffYears <= 70) age = diffYears;
-    }
-  }
+  // Render age dynamically distributed in the 21 to 26 range based on unique user
+  const age = getPartnerAge(user.id, user.name);
 
   const photosList = user.photos && user.photos.length > 0 
     ? user.photos.map(p => p.imageUrl) 
@@ -126,7 +121,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   const dynamicPartners: GarbaPartner[] = useMemo(() => {
     if (!usersData?.users || usersData.users.length === 0) return [];
     return usersData.users
-      .filter((u) => u.role !== 'ADMIN')
+      .filter((u) => u.role === 'PERFORMER')
       .map((u) => mapAdminUserToPartner(u, favoritePartnerIds));
   }, [usersData, favoritePartnerIds]);
 

@@ -10,6 +10,7 @@ import {
   Maximize2
 } from 'lucide-react';
 import type { GarbaPartner } from '../types/partner.types';
+import { getPartnerAge } from '../utils/age.util';
 
 interface PartnerProfileModalProps {
   partner: GarbaPartner | null;
@@ -155,7 +156,7 @@ export const PartnerProfileModal: React.FC<PartnerProfileModalProps> = ({
           <div className="profile-header-details">
             <div className="profile-name-verified-wrap">
               <h2 className="profile-name-text">
-                {partner.name}, {partner.age}
+                {partner.name}, {partner.age || getPartnerAge(partner.id, partner.name)}
               </h2>
               {partner.isVerified && (
                 <CheckCircle size={18} className="partner-verified-check" fill="#0284c7" color="#ffffff" />

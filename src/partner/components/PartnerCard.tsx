@@ -9,6 +9,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import type { GarbaPartner } from '../types/partner.types';
+import { getPartnerAge } from '../utils/age.util';
 
 interface PartnerCardProps {
   partner: GarbaPartner;
@@ -70,7 +71,7 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({
             onClick={() => onOpenProfile(partner)}
             style={{ cursor: 'pointer' }}
           >
-            <span>{partner.name}, {partner.age}</span>
+            <span>{partner.name}, {partner.age || getPartnerAge(partner.id, partner.name)}</span>
             {partner.isVerified && (
               <CheckCircle size={15} className="partner-verified-check" fill="#0284c7" color="#ffffff" />
             )}

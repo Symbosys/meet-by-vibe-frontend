@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Send, Sparkles, CheckCircle2 } from 'lucide-react';
 import type { GarbaPartner, GarbaEvent } from '../types/partner.types';
+import { getPartnerAge } from '../utils/age.util';
 
 interface RequestPartnerModalProps {
   partner: GarbaPartner | null;
@@ -72,7 +73,7 @@ export const RequestPartnerModal: React.FC<RequestPartnerModalProps> = ({
                 />
                 <div>
                   <div style={{ fontWeight: 800, fontSize: '15px', color: '#0f172a' }}>
-                    {partner.name}, {partner.age}
+                    {partner.name}, {partner.age || getPartnerAge(partner.id, partner.name)}
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
                     📍 {partner.city}
