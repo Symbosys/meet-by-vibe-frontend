@@ -222,18 +222,77 @@ export const UserModal: React.FC<UserModalProps> = ({
       payload.append('isVerified', String(formData.isVerified ?? false));
       payload.append('danceStyles', JSON.stringify(formData.danceStyles || []));
 
+      // Helper to convert base64 dataUrl to File
+      const dataUrlToFile = (dataUrl: string, filename: string): File | null => {
+        try {
+          const arr = dataUrl.split(',');
+          const mimeMatch = arr[0].match(/:(.*?);/);
+          const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+          const bstr = atob(arr[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          return new File([u8arr], filename, { type: mime });
+        } catch {
+          return null;
+        }
+      };
+
       // Append avatar file or URL
       if (avatarFile) {
         payload.append('avatar', avatarFile);
       } else if (formData.avatarUrl) {
-        payload.append('avatarUrl', formData.avatarUrl);
+        if (formData.avatarUrl.startsWith('data:image/')) {
+          const file = dataUrlToFile(formData.avatarUrl, 'avatar.jpg');
+          if (file) {
+            payload.append('avatar', file);
+          } else {
+            payload.append('avatarUrl', formData.avatarUrl);
+          }
+        } else {
+          payload.append('avatarUrl', formData.avatarUrl);
+        }
       }
 
-      // Append all gallery files
-      const newFiles = Object.values(galleryFiles);
-      newFiles.forEach((file) => {
-        payload.append('photos', file);
+      // Collect all 5 gallery photos (both File objects and remote web URLs)
+      const photoUrlsToSend: string[] = [];
+      const photosList = (formData.photos || []).filter((p) => p && p.imageUrl && p.imageUrl.trim().length > 0);
+
+      // 1. Process valid items in formData.photos
+      photosList.forEach((p, idx) => {
+        const slotIdx = p.order !== undefined ? p.order : idx;
+        const file = galleryFiles[slotIdx] || galleryFiles[idx];
+        if (file) {
+          payload.append('photos', file);
+        } else if (p.imageUrl) {
+          if (p.imageUrl.startsWith('data:image/')) {
+            const convertedFile = dataUrlToFile(p.imageUrl, `photo-${idx + 1}.jpg`);
+            if (convertedFile) {
+              payload.append('photos', convertedFile);
+            } else {
+              photoUrlsToSend.push(p.imageUrl);
+            }
+          } else if (!p.imageUrl.startsWith('blob:')) {
+            photoUrlsToSend.push(p.imageUrl);
+          }
+        }
       });
+
+      // 2. Also append any remaining galleryFiles that weren't captured
+      const usedSlots = new Set(photosList.map((p, idx) => (p.order !== undefined ? p.order : idx)));
+      Object.keys(galleryFiles).forEach((key) => {
+        const slotIdx = Number(key);
+        if (!usedSlots.has(slotIdx) && galleryFiles[slotIdx]) {
+          payload.append('photos', galleryFiles[slotIdx]);
+        }
+      });
+
+      // 3. Send photoUrls array if any remote / web URLs exist
+      if (photoUrlsToSend.length > 0) {
+        payload.append('photoUrls', JSON.stringify(photoUrlsToSend));
+      }
 
       if (user && user.id) {
         await updateUserMutation.mutateAsync({
@@ -556,19 +615,23 @@ export const UserModal: React.FC<UserModalProps> = ({
       setGalleryFiles((prev) => ({ ...prev, [slotIndex]: fileToSave }));
       setFormData((prev) => {
         const currentPhotos = [...(prev.photos || [])];
-        const newPhoto: UserPhoto = {
+        while (currentPhotos.length <= slotIndex) {
+          const nextIdx = currentPhotos.length;
+          currentPhotos.push({
+            id: `p-${Date.now()}-${nextIdx}`,
+            userId: user?.id || 'temp',
+            imageUrl: '',
+            caption: PHOTO_SLOT_LABELS[nextIdx] || `Photo ${nextIdx + 1}`,
+            order: nextIdx
+          });
+        }
+        currentPhotos[slotIndex] = {
           id: currentPhotos[slotIndex]?.id || `p-${Date.now()}-${slotIndex}`,
           userId: user?.id || 'temp',
           imageUrl: compressedDataUrl,
           caption: PHOTO_SLOT_LABELS[slotIndex] || `Photo ${slotIndex + 1}`,
           order: slotIndex
         };
-
-        if (slotIndex < currentPhotos.length) {
-          currentPhotos[slotIndex] = newPhoto;
-        } else {
-          currentPhotos.push(newPhoto);
-        }
 
         const avatarUrl = slotIndex === 0 && !prev.avatarUrl ? compressedDataUrl : prev.avatarUrl;
 
@@ -608,19 +671,23 @@ export const UserModal: React.FC<UserModalProps> = ({
 
     setFormData((prev) => {
       const currentPhotos = [...(prev.photos || [])];
-      const newPhoto: UserPhoto = {
+      while (currentPhotos.length <= slotIndex) {
+        const nextIdx = currentPhotos.length;
+        currentPhotos.push({
+          id: `p-${Date.now()}-${nextIdx}`,
+          userId: user?.id || 'temp',
+          imageUrl: '',
+          caption: PHOTO_SLOT_LABELS[nextIdx] || `Photo ${nextIdx + 1}`,
+          order: nextIdx
+        });
+      }
+      currentPhotos[slotIndex] = {
         id: currentPhotos[slotIndex]?.id || `p-${Date.now()}-${slotIndex}`,
         userId: user?.id || 'temp',
         imageUrl: finalImageUrl,
         caption: PHOTO_SLOT_LABELS[slotIndex] || `Photo ${slotIndex + 1}`,
         order: slotIndex
       };
-
-      if (slotIndex < currentPhotos.length) {
-        currentPhotos[slotIndex] = newPhoto;
-      } else {
-        currentPhotos.push(newPhoto);
-      }
 
       const avatarUrl = slotIndex === 0 && !prev.avatarUrl ? finalImageUrl : prev.avatarUrl;
 
