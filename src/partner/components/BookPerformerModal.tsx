@@ -291,6 +291,10 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
 
   const handleConfirmPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!proofFile && !proofPreviewUrl) {
+      setErrorMsg('Please upload your payment screenshot proof before confirming.');
+      return;
+    }
     if (!utrNumber.trim() || utrNumber.trim().length < 6) {
       setErrorMsg('Please enter valid 12-digit UPI UTR / Bank Reference number.');
       return;
@@ -908,7 +912,15 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
               <button type="button" className="btn-partner-outline" onClick={() => setStep('form')} disabled={submitPaymentProof.isPending || isCompressingProof}>
                 Back to Details
               </button>
-              <button type="submit" className="btn-partner-primary" disabled={submitPaymentProof.isPending || isCompressingProof}>
+              <button
+                type="submit"
+                className="btn-partner-primary"
+                disabled={submitPaymentProof.isPending || isCompressingProof || (!proofFile && !proofPreviewUrl)}
+                style={{
+                  opacity: (submitPaymentProof.isPending || isCompressingProof || (!proofFile && !proofPreviewUrl)) ? 0.6 : 1,
+                  cursor: (submitPaymentProof.isPending || isCompressingProof || (!proofFile && !proofPreviewUrl)) ? 'not-allowed' : 'pointer',
+                }}
+              >
                 {submitPaymentProof.isPending ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />

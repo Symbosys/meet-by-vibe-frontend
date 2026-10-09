@@ -24,6 +24,33 @@ interface BookingDetailsModalProps {
   onUpdateStatus: (bookingId: string, newStatus: BookingStatus) => void;
 }
 
+// Helper to extract uploaded client photo from JSON image or avatar fields
+function getBookingClientPhoto(b: AdminBooking): string | null {
+  if (!b) return null;
+  const img = b.image;
+  if (img) {
+    if (typeof img === 'string' && img.trim().length > 0) return img.trim();
+    if (typeof img === 'object') {
+      if (img.url && typeof img.url === 'string') return img.url;
+      if (img.imageUrl && typeof img.imageUrl === 'string') return img.imageUrl;
+      if (img.avatarUrl && typeof img.avatarUrl === 'string') return img.avatarUrl;
+      if (Array.isArray(img) && img.length > 0) {
+        const first = img[0];
+        if (typeof first === 'string') return first;
+        if (first?.url) return first.url;
+        if (first?.imageUrl) return first.imageUrl;
+      }
+    }
+  }
+  if (b.avatarUrl && typeof b.avatarUrl === 'string' && b.avatarUrl.trim().length > 0) {
+    return b.avatarUrl.trim();
+  }
+  if (b.customer?.avatarUrl && typeof b.customer.avatarUrl === 'string' && b.customer.avatarUrl.trim().length > 0) {
+    return b.customer.avatarUrl.trim();
+  }
+  return null;
+}
+
 export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
   booking,
   isOpen,
@@ -34,8 +61,8 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
 
   if (!isOpen || !booking) return null;
 
-  // Retrieve exact uploaded client photo from database
-  const clientUploadedPhoto = booking.customer?.avatarUrl || (booking as any).avatarUrl || null;
+  // Retrieve exact uploaded client photo from database (JSON image column or avatarUrl)
+  const clientUploadedPhoto = getBookingClientPhoto(booking);
   const hasClientPhoto = Boolean(clientUploadedPhoto && clientUploadedPhoto.trim().length > 0);
 
   // Performer Avatar

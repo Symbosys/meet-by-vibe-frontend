@@ -103,8 +103,10 @@ export interface AdminBooking {
   phone: string;
   address: string;
   gender: Gender;
+  image?: any;
+  avatarUrl?: string;
   
-  customerId: string;
+  customerId?: string;
   customer?: Partial<AdminUser>;
   
   performerId: string;

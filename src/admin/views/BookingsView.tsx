@@ -14,6 +14,33 @@ interface BookingsViewProps {
   onUpdateStatus: (bookingId: string, newStatus: BookingStatus) => void;
 }
 
+// Helper to extract uploaded client photo from JSON image or avatar fields
+function getBookingClientPhoto(b: AdminBooking): string | null {
+  if (!b) return null;
+  const img = b.image;
+  if (img) {
+    if (typeof img === 'string' && img.trim().length > 0) return img.trim();
+    if (typeof img === 'object') {
+      if (img.url && typeof img.url === 'string') return img.url;
+      if (img.imageUrl && typeof img.imageUrl === 'string') return img.imageUrl;
+      if (img.avatarUrl && typeof img.avatarUrl === 'string') return img.avatarUrl;
+      if (Array.isArray(img) && img.length > 0) {
+        const first = img[0];
+        if (typeof first === 'string') return first;
+        if (first?.url) return first.url;
+        if (first?.imageUrl) return first.imageUrl;
+      }
+    }
+  }
+  if (b.avatarUrl && typeof b.avatarUrl === 'string' && b.avatarUrl.trim().length > 0) {
+    return b.avatarUrl.trim();
+  }
+  if (b.customer?.avatarUrl && typeof b.customer.avatarUrl === 'string' && b.customer.avatarUrl.trim().length > 0) {
+    return b.customer.avatarUrl.trim();
+  }
+  return null;
+}
+
 export const BookingsView: React.FC<BookingsViewProps> = ({
   bookings,
   onViewBooking,
@@ -113,42 +140,47 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
                   {/* Booker info with exact DB avatar or No-Photo placeholder */}
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {b.customer?.avatarUrl || (b as any).avatarUrl ? (
-                        <img
-                          src={(b.customer?.avatarUrl || (b as any).avatarUrl)!}
-                          alt={b.name}
-                          style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #10b981', flexShrink: 0 }}
-                          title="Client Photo (Uploaded during booking)"
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '50%',
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            border: '1px dashed rgba(239, 68, 68, 0.4)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#f87171',
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            flexShrink: 0
-                          }}
-                          title="No photo was uploaded during booking"
-                        >
-                          N/A
+                    {(() => {
+                      const clientPhoto = getBookingClientPhoto(b);
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {clientPhoto ? (
+                            <img
+                              src={clientPhoto}
+                              alt={b.name}
+                              style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #10b981', flexShrink: 0 }}
+                              title="Client Photo (Uploaded during booking)"
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '34px',
+                                height: '34px',
+                                borderRadius: '50%',
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                border: '1px dashed rgba(239, 68, 68, 0.4)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#f87171',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                flexShrink: 0
+                              }}
+                              title="No photo was uploaded during booking"
+                            >
+                              N/A
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '13px', color: '#ffffff' }}>{b.name}</div>
+                            <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                              {b.phone} • <span style={{ color: b.gender === 'FEMALE' ? '#f472b6' : '#60a5fa' }}>{b.gender}</span>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: '13px', color: '#ffffff' }}>{b.name}</div>
-                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                          {b.phone} • <span style={{ color: b.gender === 'FEMALE' ? '#f472b6' : '#60a5fa' }}>{b.gender}</span>
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    })()}
                     <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{b.email}</div>
                     <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
                       📍 {b.address}
