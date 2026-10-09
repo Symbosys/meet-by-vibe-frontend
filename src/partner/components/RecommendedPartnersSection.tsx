@@ -128,6 +128,7 @@ export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProp
             <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '24px', gap: '2px', border: '1px solid #e2e8f0' }}>
               <button
                 type="button"
+                id="filter-gender-all"
                 onClick={() => onChangeGender('ALL')}
                 style={{
                   padding: '5px 12px',
@@ -145,6 +146,7 @@ export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProp
               </button>
               <button
                 type="button"
+                id="filter-gender-female"
                 onClick={() => onChangeGender('FEMALE')}
                 style={{
                   padding: '5px 12px',
@@ -162,6 +164,7 @@ export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProp
               </button>
               <button
                 type="button"
+                id="filter-gender-male"
                 onClick={() => onChangeGender('MALE')}
                 style={{
                   padding: '5px 12px',
@@ -180,6 +183,7 @@ export const RecommendedPartnersSection: React.FC<RecommendedPartnersSectionProp
               {onOpenGenderModal && (
                 <button
                   type="button"
+                  id="filter-gender-modal-open"
                   onClick={onOpenGenderModal}
                   style={{
                     padding: '5px 8px',

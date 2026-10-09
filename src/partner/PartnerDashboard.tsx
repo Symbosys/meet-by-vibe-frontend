@@ -43,11 +43,15 @@ function mapAdminUserToPartner(user: AdminUser, favoritePartnerIds: Set<string>)
 
   const skillName = skillMap[user.skillLevel] || user.skillLevel || 'Choreographer';
 
+  const normalizedGender: 'MALE' | 'FEMALE' | 'OTHER' = 
+    String(user.gender || '').trim().toUpperCase() === 'MALE' ? 'MALE' :
+    String(user.gender || '').trim().toUpperCase() === 'FEMALE' ? 'FEMALE' : 'OTHER';
+
   return {
     id: user.id,
     name: user.name,
     age,
-    gender: user.gender || 'OTHER',
+    gender: normalizedGender,
     avatarUrl: avatar,
     isVerified: user.isVerified ?? true,
     isOnline: user.isAvailable ?? true,
@@ -119,10 +123,20 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   });
 
   const dynamicPartners: GarbaPartner[] = useMemo(() => {
-    if (!usersData?.users || usersData.users.length === 0) return [];
-    return usersData.users
-      .filter((u) => u.role === 'PERFORMER')
-      .map((u) => mapAdminUserToPartner(u, favoritePartnerIds));
+    let rawUsers: AdminUser[] = [];
+    if (Array.isArray(usersData)) {
+      rawUsers = usersData;
+    } else if (Array.isArray((usersData as any)?.users)) {
+      rawUsers = (usersData as any).users;
+    } else if (Array.isArray((usersData as any)?.data?.users)) {
+      rawUsers = (usersData as any).data.users;
+    } else if (Array.isArray((usersData as any)?.data)) {
+      rawUsers = (usersData as any).data;
+    }
+
+    if (!rawUsers || rawUsers.length === 0) return [];
+
+    return rawUsers.map((u) => mapAdminUserToPartner(u, favoritePartnerIds));
   }, [usersData, favoritePartnerIds]);
 
   // Local state for event interactive actions (bookmark / RSVP)
@@ -192,9 +206,11 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   // Filter dynamic partners based on gender preference, search query & selected city
   const filteredPartners = useMemo(() => {
     return dynamicPartners.filter((p) => {
-      // Gender filtering
+      // Gender filtering: ALL shows both Male & Female, FEMALE shows Female only, MALE shows Male only
       if (selectedGenderPreference && selectedGenderPreference !== 'ALL') {
-        if (p.gender && p.gender.toUpperCase() !== selectedGenderPreference.toUpperCase()) {
+        const pref = selectedGenderPreference.toUpperCase();
+        const pGender = String(p.gender || '').toUpperCase();
+        if (pGender !== pref) {
           return false;
         }
       }
