@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   UserPlus, 
   Search, 
@@ -25,6 +25,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
   onAddUser,
   onEditUser,
 }) => {
+  const [genderFilter, setGenderFilter] = useState<'ALL' | 'FEMALE' | 'MALE'>('ALL');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [skillFilter, setSkillFilter] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
@@ -35,6 +36,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
   const { data, isLoading, isError, error, refetch, isFetching } = useUsers({
     search: search || undefined,
     role: roleFilter === 'ALL' ? undefined : (roleFilter as Role),
+    gender: genderFilter === 'ALL' ? undefined : (genderFilter as any),
     skillLevel: skillFilter !== 'ALL' ? (skillFilter as SkillLevel) : undefined,
     limit: 100,
   });
@@ -42,13 +44,36 @@ export const UsersView: React.FC<UsersViewProps> = ({
   const deleteUserMutation = useDeleteUser();
   const toggleStatusMutation = useToggleUserStatus();
 
-  // Exclude booking clients / customers from performer models directory
-  const users: AdminUser[] = (data?.users || []).filter((u) => u.role !== 'CUSTOMER');
+  // Filter users/models dynamically based on search, gender, role and skill
+  const users: AdminUser[] = useMemo(() => {
+    const raw = data?.users || [];
+    return raw.filter((u) => {
+      // 1. Role Filter
+      if (roleFilter !== 'ALL' && u.role !== roleFilter) {
+        return false;
+      }
+
+      // 2. Gender Filter: ALL shows both, FEMALE shows only FEMALE, MALE shows only MALE
+      if (genderFilter !== 'ALL') {
+        const uGender = String(u.gender || '').trim().toUpperCase();
+        if (uGender !== genderFilter) {
+          return false;
+        }
+      }
+
+      // 3. Skill Filter
+      if (skillFilter !== 'ALL' && u.skillLevel !== skillFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [data?.users, roleFilter, genderFilter, skillFilter]);
 
   // Reset to page 1 whenever filters or page size change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, roleFilter, skillFilter, pageSize]);
+  }, [search, genderFilter, roleFilter, skillFilter, pageSize]);
 
   // Calculate pagination
   const totalItems = users.length;
@@ -82,18 +107,18 @@ export const UsersView: React.FC<UsersViewProps> = ({
   return (
     <div className="admin-card">
       {/* Header with Filters & Actions */}
-      <div className="admin-card-header">
+      <div className="admin-card-header" style={{ flexWrap: 'wrap', gap: '14px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2>Performer & Dancer Models ({users.length})</h2>
+            <h2>User & Performer Models ({users.length})</h2>
             {isFetching && <Loader2 size={16} className="spin" color="#f59e0b" />}
           </div>
           <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
-            Directory of verified Garba dancer models and choreographers available for booking. (Booker details are in Bookings screen).
+            Directory of verified Garba dancer models, performers and choreographers with live gender filters.
           </p>
         </div>
 
-        <div className="admin-card-actions">
+        <div className="admin-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Refresh Button */}
           <button 
             className="btn-admin-secondary" 
@@ -110,11 +135,76 @@ export const UsersView: React.FC<UsersViewProps> = ({
             <input
               type="text"
               className="admin-search-input"
-              style={{ width: '180px' }}
+              style={{ width: '150px' }}
               placeholder="Search models..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+          </div>
+
+          {/* Gender Filter Buttons Group */}
+          <div style={{
+            display: 'inline-flex',
+            background: 'rgba(15, 23, 42, 0.6)',
+            padding: '2px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            gap: '2px'
+          }}>
+            <button
+              type="button"
+              onClick={() => setGenderFilter('ALL')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: genderFilter === 'ALL' ? '#f59e0b' : 'transparent',
+                color: genderFilter === 'ALL' ? '#000000' : '#94a3b8',
+                transition: 'all 0.15s ease'
+              }}
+              title="Show all male and female models"
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => setGenderFilter('FEMALE')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: genderFilter === 'FEMALE' ? '#ff1379' : 'transparent',
+                color: genderFilter === 'FEMALE' ? '#ffffff' : '#94a3b8',
+                transition: 'all 0.15s ease'
+              }}
+              title="Show only female models"
+            >
+              💃 Female
+            </button>
+            <button
+              type="button"
+              onClick={() => setGenderFilter('MALE')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: genderFilter === 'MALE' ? '#0284c7' : 'transparent',
+                color: genderFilter === 'MALE' ? '#ffffff' : '#94a3b8',
+                transition: 'all 0.15s ease'
+              }}
+              title="Show only male models"
+            >
+              🕺 Male
+            </button>
           </div>
 
           {/* Role Filter */}
@@ -123,8 +213,9 @@ export const UsersView: React.FC<UsersViewProps> = ({
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
           >
-            <option value="ALL">All Performer Models</option>
-            <option value="PERFORMER">Performers & Models Only</option>
+            <option value="ALL">All Roles</option>
+            <option value="PERFORMER">Performers Only</option>
+            <option value="CUSTOMER">Customers</option>
             <option value="ORGANIZER">Organizers</option>
             <option value="ADMIN">Admins</option>
           </select>
@@ -135,7 +226,7 @@ export const UsersView: React.FC<UsersViewProps> = ({
             value={skillFilter}
             onChange={(e) => setSkillFilter(e.target.value)}
           >
-            <option value="ALL">All Skill Levels</option>
+            <option value="ALL">All Skills</option>
             <option value="BEGINNER">Beginner</option>
             <option value="INTERMEDIATE">Intermediate</option>
             <option value="ADVANCED">Advanced</option>
@@ -259,8 +350,8 @@ export const UsersView: React.FC<UsersViewProps> = ({
                       <div>
                         <strong style={{ color: '#fff' }}>{u.city || 'N/A'}</strong>, {u.state || 'Gujarat'}
                       </div>
-                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>
-                        Height: <span style={{ color: '#f59e0b' }}>{u.height ? `${u.height} cm` : 'N/A'}</span> • {u.gender}
+                      <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>
+                        Height: <span style={{ color: '#f59e0b' }}>{u.height ? `${u.height} cm` : 'N/A'}</span> • <span style={{ color: u.gender === 'FEMALE' ? '#ff7eb6' : u.gender === 'MALE' ? '#38bdf8' : '#cbd5e1', fontWeight: 600 }}>{u.gender === 'FEMALE' ? '💃 Female' : u.gender === 'MALE' ? '🕺 Male' : u.gender || 'N/A'}</span>
                       </div>
                       {u.pincode && (
                         <div style={{ color: '#64748b', fontSize: '10px' }}>Pin: {u.pincode}</div>
