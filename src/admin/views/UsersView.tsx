@@ -361,21 +361,17 @@ export const UsersView: React.FC<UsersViewProps> = ({
 
                   {/* Rate & UPI */}
                   <td>
-                    {u.role === 'PERFORMER' ? (
-                      <div>
-                        <div style={{ fontWeight: 700, color: '#10b981', fontSize: '13.5px' }}>
-                          ₹{u.hourlyRate || 399}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#38bdf8', fontFamily: 'monospace' }}>
-                          {u.upiId || 'No UPI ID'}
-                        </div>
-                        <div style={{ fontSize: '10px', color: '#94a3b8' }}>
-                          ⭐ {u.rating || 5.0} ({u.reviewCount || 0} reviews)
-                        </div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#10b981', fontSize: '13.5px' }}>
+                        ₹{u.hourlyRate ? Number(u.hourlyRate) : 399}
                       </div>
-                    ) : (
-                      <span style={{ color: '#64748b', fontSize: '11.5px' }}>Standard Customer</span>
-                    )}
+                      <div style={{ fontSize: '11px', color: '#38bdf8', fontFamily: 'monospace' }}>
+                        {u.upiId || 'No UPI ID'}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#94a3b8' }}>
+                        ⭐ {u.rating ? Number(u.rating).toFixed(1) : '5.0'} ({u.reviewCount || 0} reviews)
+                      </div>
+                    </div>
                   </td>
 
                   {/* Status & Availability */}

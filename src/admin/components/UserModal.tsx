@@ -1465,63 +1465,58 @@ export const UserModal: React.FC<UserModalProps> = ({
             </div>
             */}
 
-            {/* Performer Specifics */}
-            {formData.role === 'PERFORMER' && (
-              <>
-                <div className="admin-form-row">
-                  <div className="admin-form-group">
-                    <label>Booking Rate (₹ 399)</label>
-                    <input
-                      type="number"
-                      className="admin-form-control"
-                      placeholder="399"
-                      value={formData.hourlyRate || ''}
-                      onChange={(e) => setFormData({ ...formData, hourlyRate: Number(e.target.value) })}
-                    />
-                  </div>
+            {/* Rates, UPI & Performer Specifics */}
+            <div className="admin-form-row">
+              <div className="admin-form-group">
+                <label>Booking Rate (₹ per hour / event) *</label>
+                <input
+                  type="number"
+                  className="admin-form-control"
+                  placeholder="e.g. 399"
+                  value={formData.hourlyRate ?? 399}
+                  onChange={(e) => setFormData({ ...formData, hourlyRate: Number(e.target.value) })}
+                />
+              </div>
 
-                  <div className="admin-form-group">
-                    <label>Skill Level</label>
-                    <select
-                      className="admin-form-control"
-                      value={formData.skillLevel || 'ADVANCED'}
-                      onChange={(e) => setFormData({ ...formData, skillLevel: e.target.value as SkillLevel })}
-                    >
-                      <option value="BEGINNER">Beginner</option>
-                      <option value="INTERMEDIATE">Intermediate</option>
-                      <option value="ADVANCED">Advanced</option>
-                      <option value="PRO">Pro</option>
-                      <option value="CHOREOGRAPHER">Choreographer</option>
-                    </select>
-                  </div>
-                </div>
+              <div className="admin-form-group">
+                <label>UPI ID (For Payout Settlement / Direct UPI) *</label>
+                <input
+                  type="text"
+                  className="admin-form-control"
+                  placeholder="e.g. username@okhdfcbank or 9876543210@paytm"
+                  value={formData.upiId || ''}
+                  onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
+                />
+              </div>
+            </div>
 
-                {/* UPI ID & Instagram Handle fields commented out as requested */}
-                {/*
-                <div className="admin-form-row">
-                  <div className="admin-form-group">
-                    <label>UPI ID (For Payout Settlement)</label>
-                    <input
-                      type="text"
-                      className="admin-form-control"
-                      placeholder="e.g. performer@upi"
-                      value={formData.upiId || ''}
-                      onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
-                    />
-                  </div>
+            <div className="admin-form-row">
+              <div className="admin-form-group">
+                <label>Skill Level</label>
+                <select
+                  className="admin-form-control"
+                  value={formData.skillLevel || 'ADVANCED'}
+                  onChange={(e) => setFormData({ ...formData, skillLevel: e.target.value as SkillLevel })}
+                >
+                  <option value="BEGINNER">Beginner</option>
+                  <option value="INTERMEDIATE">Intermediate</option>
+                  <option value="ADVANCED">Advanced</option>
+                  <option value="PRO">Pro</option>
+                  <option value="CHOREOGRAPHER">Choreographer</option>
+                </select>
+              </div>
 
-                  <div className="admin-form-group">
-                    <label>Instagram Handle</label>
-                    <input
-                      type="text"
-                      className="admin-form-control"
-                      placeholder="e.g. garba_dancer"
-                      value={formData.instagramHandle || ''}
-                      onChange={(e) => setFormData({ ...formData, instagramHandle: e.target.value })}
-                    />
-                  </div>
-                </div>
-                */}
+              <div className="admin-form-group">
+                <label>Instagram Handle (Optional)</label>
+                <input
+                  type="text"
+                  className="admin-form-control"
+                  placeholder="e.g. garba_dancer"
+                  value={formData.instagramHandle || ''}
+                  onChange={(e) => setFormData({ ...formData, instagramHandle: e.target.value })}
+                />
+              </div>
+            </div>
 
                 {/* Dance Styles field commented out as requested */}
                 {/*
@@ -1577,8 +1572,6 @@ export const UserModal: React.FC<UserModalProps> = ({
                   />
                 </div>
                 */}
-              </>
-            )}
 
             {/* Toggles */}
             <div style={{ display: 'flex', gap: '20px', marginTop: '6px', flexWrap: 'wrap' }}>
