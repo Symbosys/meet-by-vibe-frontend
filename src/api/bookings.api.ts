@@ -127,4 +127,10 @@ export const bookingsApi = {
     });
     return res.data;
   },
+
+  // Delete booking permanently from database
+  delete: async (id: string): Promise<{ success: boolean; message: string }> => {
+    const res = await apiClient.delete<{ success: boolean; message: string }>(`/bookings/${id}`);
+    return res.data;
+  },
 };

@@ -6,7 +6,7 @@ import {
   MapPin, 
   CheckCircle2, 
   FileCheck,
-  Ban,
+  Trash2,
   User,
   Phone,
   Mail,
@@ -22,6 +22,7 @@ interface BookingDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdateStatus: (bookingId: string, newStatus: BookingStatus) => void;
+  onDeleteBooking?: (booking: AdminBooking) => void;
 }
 
 // Helper to extract uploaded client photo from JSON image or avatar fields
@@ -55,7 +56,8 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
   booking,
   isOpen,
   onClose,
-  onUpdateStatus
+  onUpdateStatus,
+  onDeleteBooking
 }) => {
   const [showFullPhoto, setShowFullPhoto] = useState(false);
 
@@ -363,32 +365,31 @@ export const BookingDetailsModal: React.FC<BookingDetailsModalProps> = ({
 
         {/* Footer Actions */}
         <div className="admin-modal-footer">
-          {booking.status === 'PENDING' || booking.status === 'PAYMENT_VERIFIED' ? (
-            <>
-              <button 
-                className="btn-admin-secondary" 
-                style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.4)' }}
-                onClick={() => {
-                  onUpdateStatus(booking.id, 'CANCELLED');
-                  onClose();
-                }}
-              >
-                <Ban size={15} />
-                <span>Cancel Booking</span>
-              </button>
+          {onDeleteBooking && (
+            <button 
+              className="btn-admin-secondary" 
+              style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.4)', marginRight: 'auto' }}
+              onClick={() => {
+                onDeleteBooking(booking);
+              }}
+            >
+              <Trash2 size={15} />
+              <span>Delete Booking</span>
+            </button>
+          )}
 
-              <button 
-                className="btn-admin-primary" 
-                style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
-                onClick={() => {
-                  onUpdateStatus(booking.id, 'CONFIRMED');
-                  onClose();
-                }}
-              >
-                <FileCheck size={16} />
-                <span>Confirm Booking (Payment Verified)</span>
-              </button>
-            </>
+          {booking.status === 'PENDING' || booking.status === 'PAYMENT_VERIFIED' ? (
+            <button 
+              className="btn-admin-primary" 
+              style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}
+              onClick={() => {
+                onUpdateStatus(booking.id, 'CONFIRMED');
+                onClose();
+              }}
+            >
+              <FileCheck size={16} />
+              <span>Confirm Booking (Payment Verified)</span>
+            </button>
           ) : booking.status === 'CONFIRMED' ? (
             <button 
               className="btn-admin-primary" 

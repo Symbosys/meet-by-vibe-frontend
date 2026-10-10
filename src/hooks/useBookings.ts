@@ -84,6 +84,19 @@ export function useCancelBooking() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.all });
       queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.detail(variables.id) });
+      queryClient.refetchQueries({ queryKey: BOOKING_KEYS.all });
+    },
+  });
+}
+
+export function useDeleteBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => bookingsApi.delete(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: BOOKING_KEYS.all });
+      queryClient.refetchQueries({ queryKey: BOOKING_KEYS.all });
     },
   });
 }

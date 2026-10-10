@@ -4,7 +4,7 @@ import {
   Clock, 
   Eye, 
   CheckCircle, 
-  Ban
+  Trash2
 } from 'lucide-react';
 import type { AdminBooking, BookingStatus } from '../types/admin.types';
 
@@ -12,6 +12,7 @@ interface BookingsViewProps {
   bookings: AdminBooking[];
   onViewBooking: (booking: AdminBooking) => void;
   onUpdateStatus: (bookingId: string, newStatus: BookingStatus) => void;
+  onDeleteBooking?: (booking: AdminBooking) => void;
 }
 
 // Helper to extract uploaded client photo from JSON image or avatar fields
@@ -44,7 +45,8 @@ function getBookingClientPhoto(b: AdminBooking): string | null {
 export const BookingsView: React.FC<BookingsViewProps> = ({
   bookings,
   onViewBooking,
-  onUpdateStatus
+  onUpdateStatus,
+  onDeleteBooking
 }) => {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
@@ -261,16 +263,16 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                         </button>
                       ) : null}
 
-                      {b.status !== 'CANCELLED' && b.status !== 'COMPLETED' ? (
+                      {onDeleteBooking && (
                         <button
                           className="btn-admin-secondary"
                           style={{ padding: '6px 8px', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
-                          title="Cancel Booking"
-                          onClick={() => onUpdateStatus(b.id, 'CANCELLED')}
+                          title="Delete Booking"
+                          onClick={() => onDeleteBooking(b)}
                         >
-                          <Ban size={14} />
+                          <Trash2 size={14} />
                         </button>
-                      ) : null}
+                      )}
                     </div>
                   </td>
                 </tr>

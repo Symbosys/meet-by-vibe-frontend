@@ -15,7 +15,7 @@ import { CreateEventScreen } from './CreateEventScreen';
 import { AdminPinLockScreen } from './components/AdminPinLockScreen';
 import { useUsers } from '../hooks/useUsers';
 import { useEvents } from '../hooks/useEvents';
-import { useBookings, useUpdateBookingStatus } from '../hooks/useBookings';
+import { useBookings, useUpdateBookingStatus, useDeleteBooking } from '../hooks/useBookings';
 
 export const AdminDashboard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -29,6 +29,7 @@ export const AdminDashboard: React.FC = () => {
   const { data: eventsData } = useEvents({ limit: 100 });
   const { data: bookingsData } = useBookings();
   const updateBookingMutation = useUpdateBookingStatus();
+  const deleteBookingMutation = useDeleteBooking();
 
   const userCount = (usersData?.users || []).filter((u) => u.role !== 'ADMIN').length;
   const eventCount = eventsData?.data?.pagination?.total ?? eventsData?.data?.events?.length ?? 0;
@@ -103,6 +104,22 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleDeleteBooking = async (booking: AdminBooking) => {
+    if (confirm(`Are you sure you want to delete booking "${booking.bookingCode}"? This will permanently remove it from the database.`)) {
+      try {
+        await deleteBookingMutation.mutateAsync(booking.id);
+      } catch (err: any) {
+        alert(err.message || 'Failed to delete booking');
+      } finally {
+        setFallbackBookings((prev) => prev.filter((b) => b.id !== booking.id));
+        if (selectedBooking && selectedBooking.id === booking.id) {
+          setSelectedBooking(null);
+          setIsBookingModalOpen(false);
+        }
+      }
+    }
+  };
+
   const pendingBookingsCount = bookings.filter(
     (b) => b.status === 'PENDING' || b.status === 'PAYMENT_VERIFIED'
   ).length;
@@ -158,6 +175,7 @@ export const AdminDashboard: React.FC = () => {
               bookings={bookings}
               onViewBooking={handleViewBooking}
               onUpdateStatus={handleUpdateBookingStatus}
+              onDeleteBooking={handleDeleteBooking}
             />
           )}
 
@@ -185,6 +203,7 @@ export const AdminDashboard: React.FC = () => {
         booking={selectedBooking}
         onClose={() => setIsBookingModalOpen(false)}
         onUpdateStatus={handleUpdateBookingStatus}
+        onDeleteBooking={handleDeleteBooking}
       />
     </div>
   );
