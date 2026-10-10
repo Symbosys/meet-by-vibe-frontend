@@ -1,5 +1,5 @@
+import { Bell, Menu, Search, ShieldCheck } from 'lucide-react';
 import React from 'react';
-import { Search, Bell, ShieldCheck, Menu } from 'lucide-react';
 import type { ActiveTab } from '../types/admin.types';
 
 interface HeaderProps {

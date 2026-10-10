@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
-import './admin.css';
-import type { ActiveTab, AdminUser, AdminBooking, BookingStatus } from './types/admin.types';
-import { INITIAL_BOOKINGS } from './data/mockData';
-import { Sidebar } from './components/Sidebar';
-import { Header } from './components/Header';
-import { UsersView } from './views/UsersView';
-import { EventsView } from './views/EventsView';
-import { BookingsView } from './views/BookingsView';
-import { PaymentsView } from './views/PaymentsView';
-import { UserModal } from './components/UserModal';
-import { EventModal } from './components/EventModal';
-import { BookingDetailsModal } from './components/BookingDetailsModal';
-import { CreateEventScreen } from './CreateEventScreen';
-import { AdminPinLockScreen } from './components/AdminPinLockScreen';
-import { useUsers } from '../hooks/useUsers';
+import { useBookings, useDeleteBooking, useUpdateBookingStatus } from '../hooks/useBookings';
 import { useEvents } from '../hooks/useEvents';
-import { useBookings, useUpdateBookingStatus, useDeleteBooking } from '../hooks/useBookings';
+import { useUsers } from '../hooks/useUsers';
+import './admin.css';
+import { AdminPinLockScreen } from './components/AdminPinLockScreen';
+import { BookingDetailsModal } from './components/BookingDetailsModal';
+import { EventModal } from './components/EventModal';
+import { Header } from './components/Header';
+import { Sidebar } from './components/Sidebar';
+import { UserModal } from './components/UserModal';
+import { CreateEventScreen } from './CreateEventScreen';
+import { INITIAL_BOOKINGS } from './data/mockData';
+import type { ActiveTab, AdminBooking, AdminUser, BookingStatus } from './types/admin.types';
+import { BookingsView } from './views/BookingsView';
+import { EventsView } from './views/EventsView';
+import { PaymentsView } from './views/PaymentsView';
+import { UsersView } from './views/UsersView';
 
 export const AdminDashboard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
