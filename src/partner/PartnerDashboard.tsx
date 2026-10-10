@@ -110,9 +110,8 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [favoritePartnerIds, setFavoritePartnerIds] = useState<Set<string>>(new Set());
 
-  // Dynamic DB Data using TanStack Query - fetch performer model users only from DB
+  // Dynamic DB Data using TanStack Query - fetch all partner & performer models from DB
   const { data: usersData, isLoading: isUsersLoading } = useUsers({
-    role: 'PERFORMER',
     page: 1,
     limit: 100,
   });
@@ -137,10 +136,10 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
 
     if (!rawUsers || rawUsers.length === 0) return [];
 
-    // Filter strictly to PERFORMER models (exclude any CUSTOMER, ADMIN, etc.)
-    const performerOnly = rawUsers.filter((u) => u.role === 'PERFORMER' || !u.role);
+    // Exclude system admins from partner discovery, display all performer/user models
+    const partnerUsers = rawUsers.filter((u) => u.role !== 'ADMIN');
 
-    return performerOnly.map((u) => mapAdminUserToPartner(u, favoritePartnerIds));
+    return partnerUsers.map((u) => mapAdminUserToPartner(u, favoritePartnerIds));
   }, [usersData, favoritePartnerIds]);
 
   // Local state for event interactive actions (bookmark / RSVP)

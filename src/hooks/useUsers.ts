@@ -17,7 +17,7 @@ export function useUsers(params?: QueryUsersParams) {
   return useQuery({
     queryKey: USER_KEYS.list(params),
     queryFn: () => usersApi.getAll(params),
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 30, // 30 seconds
   });
 }
 
@@ -40,8 +40,9 @@ export function useCreateUser() {
 
   return useMutation({
     mutationFn: (formData: FormData) => usersApi.create(formData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
+      queryClient.refetchQueries({ queryKey: USER_KEYS.all });
     },
   });
 }
@@ -55,9 +56,10 @@ export function useUpdateUser() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: FormData | Partial<AdminUser> }) =>
       usersApi.update(id, data),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
       queryClient.invalidateQueries({ queryKey: USER_KEYS.detail(variables.id) });
+      queryClient.refetchQueries({ queryKey: USER_KEYS.all });
     },
   });
 }
@@ -70,8 +72,9 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: (id: string) => usersApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
+      queryClient.refetchQueries({ queryKey: USER_KEYS.all });
     },
   });
 }
@@ -85,9 +88,10 @@ export function useUploadUserPhotos() {
   return useMutation({
     mutationFn: ({ userId, formData }: { userId: string; formData: FormData }) =>
       usersApi.uploadPhotos(userId, formData),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
       queryClient.invalidateQueries({ queryKey: USER_KEYS.detail(variables.userId) });
+      queryClient.refetchQueries({ queryKey: USER_KEYS.all });
     },
   });
 }
@@ -101,9 +105,10 @@ export function useDeleteUserPhoto() {
   return useMutation({
     mutationFn: ({ userId, photoId }: { userId: string; photoId: string }) =>
       usersApi.deletePhoto(userId, photoId),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
       queryClient.invalidateQueries({ queryKey: USER_KEYS.detail(variables.userId) });
+      queryClient.refetchQueries({ queryKey: USER_KEYS.all });
     },
   });
 }
@@ -122,9 +127,10 @@ export function useToggleUserStatus() {
       id: string;
       field: "isActive" | "isAvailable" | "isVerified";
     }) => usersApi.toggleStatus(id, field),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: USER_KEYS.all });
       queryClient.invalidateQueries({ queryKey: USER_KEYS.detail(variables.id) });
+      queryClient.refetchQueries({ queryKey: USER_KEYS.all });
     },
   });
 }
