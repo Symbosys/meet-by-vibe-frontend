@@ -6,9 +6,9 @@ export const CURRENT_USER = {
   fullName: 'Aarohi Sen',
   avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
   isPremium: true,
-  state: 'Jharkhand',
-  stateCode: 'JH',
-  city: 'Ranchi',
+  state: '',
+  stateCode: '',
+  city: '',
   unreadNotifications: 2,
   unreadMessages: 5,
 };
