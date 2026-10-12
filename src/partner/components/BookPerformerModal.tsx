@@ -1,5 +1,4 @@
 import {
-  AlertCircle,
   Calendar,
   Camera,
   Check,
@@ -19,6 +18,7 @@ import {
   X
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import type { Gender } from '../../admin/types/admin.types';
 import { useInitiateBooking, useSubmitPaymentProof } from '../../hooks/useBookings';
 import { useActiveQRCode } from '../../hooks/useQR';
@@ -158,7 +158,6 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const [utrNumber, setUtrNumber] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(900); // 15 mins
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // When start time is selected, end time is automatically set to 5 hours later
   const handleStartTimeChange = (newStart: string) => {
@@ -190,7 +189,6 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
     if (isOpen) {
       refetchActiveQR();
       setStep('form');
-      setErrorMsg(null);
       setCopiedUpi(false);
       setTimeLeftSeconds(900);
       setCreatedBookingId('');
@@ -259,12 +257,11 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setErrorMsg('Please select a valid image file (PNG, JPG, WEBP, etc.)');
+      toast.error('Please select a valid image file (PNG, JPG, WEBP, etc.)');
       return;
     }
 
     try {
-      setErrorMsg(null);
       setIsCompressingAvatar(true);
 
       // Compress strictly <= 95 KB (under 100 KB limit)
@@ -279,7 +276,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       setCompressedSizeKB(compressed.sizeKB);
     } catch (err: any) {
       console.error('Image compression error:', err);
-      setErrorMsg('Failed to compress image. Please try another photo.');
+      toast.error('Failed to compress image. Please try another photo.');
     } finally {
       setIsCompressingAvatar(false);
     }
@@ -306,12 +303,11 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setErrorMsg('Please select a valid image file (PNG, JPG, WEBP, etc.) for payment receipt.');
+      toast.error('Please select a valid image file (PNG, JPG, WEBP, etc.) for payment receipt.');
       return;
     }
 
     try {
-      setErrorMsg(null);
       setIsCompressingProof(true);
 
       // Compress strictly to <= 95 KB (under 100 KB limit)
@@ -327,7 +323,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       setProofOriginalSizeKB(compressed.originalSizeKB);
     } catch (err: any) {
       console.error('Screenshot compression error:', err);
-      setErrorMsg('Failed to process and compress screenshot. Please try another image.');
+      toast.error('Failed to process and compress screenshot. Please try another image.');
     } finally {
       setIsCompressingProof(false);
     }
@@ -356,11 +352,14 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   // Step 1: Proceed to QR Payment - validates details locally without triggering booking creation API
   const handleProceedToPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !phone.trim() || !address.trim()) {
-      setErrorMsg('Please complete all client contact & address details.');
+    if (!avatarUrl && !avatarFile) {
+      toast.error('Profile picture is mandatory. Please upload your profile photo / selfie.');
       return;
     }
-    setErrorMsg(null);
+    if (!name.trim() || !email.trim() || !phone.trim() || !address.trim()) {
+      toast.error('Please complete all client contact & address details.');
+      return;
+    }
     setStep('payment');
   };
 
@@ -368,17 +367,15 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const handleConfirmPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!proofFile && !proofPreviewUrl) {
-      setErrorMsg('Please upload your payment screenshot proof before confirming.');
+      toast.error('Please upload your payment screenshot proof before confirming.');
       return;
     }
     if (!utrNumber.trim() || utrNumber.trim().length < 6) {
-      setErrorMsg('Please enter valid 12-digit UPI UTR / Bank Reference number.');
+      toast.error('Please enter valid 12-digit UPI UTR / Bank Reference number.');
       return;
     }
 
     try {
-      setErrorMsg(null);
-
       // Clean ISO timestamp strings
       const startDateTime = `${bookingDate}T${startTime}:00.000Z`;
       const endDateTime = `${bookingDate}T${endTime}:00.000Z`;
@@ -457,7 +454,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       setStep('success');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err.message || 'Failed to complete booking and payment verification. Please try again.';
-      setErrorMsg(msg);
+      toast.error(msg);
     }
   };
 
@@ -505,13 +502,6 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
         {step === 'form' && (
           <form onSubmit={handleProceedToPayment} className="book-modal-form">
             <div className="partner-modal-body book-modal-body">
-              {errorMsg && (
-                <div className="book-error-alert">
-                  <AlertCircle size={15} />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-
               {/* Performer Summary Strip */}
               <div className="book-performer-summary">
                 <div className="book-performer-left">
@@ -585,7 +575,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       <div className="book-avatar-header-row">
                         <div className="book-avatar-title-wrap">
                           <span className="book-avatar-title">
-                            Client Profile Photo / Selfie
+                            Client Profile Photo / Selfie *
                           </span>
                           {compressedSizeKB !== null && (
                             <span className="book-badge-compressed">
@@ -891,13 +881,6 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
         {step === 'payment' && (
           <form onSubmit={handleConfirmPayment} className="book-modal-form">
             <div className="partner-modal-body book-modal-body text-center">
-              {errorMsg && (
-                <div className="book-error-alert">
-                  <AlertCircle size={14} />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-
               {/* Countdown & Booking Code & Client Tag */}
               <div className="book-payment-status-strip">
                 <div className="book-payment-client-tag">

@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Clock, 
   Eye, 
   CheckCircle, 
-  Trash2
+  Trash2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import type { AdminBooking, BookingStatus } from '../types/admin.types';
 
@@ -50,6 +52,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 }) => {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter, pageSize]);
 
   const filteredBookings = bookings.filter((b) => {
     const matchesStatus = statusFilter === 'ALL' || b.status === statusFilter;
@@ -61,6 +70,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
     return matchesStatus && matchesSearch;
   });
+
+  const totalItems = filteredBookings.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedBookings = filteredBookings.slice(startIndex, endIndex);
 
   return (
     <div className="admin-card">
@@ -125,7 +141,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 </td>
               </tr>
             ) : (
-              filteredBookings.map((b) => (
+              paginatedBookings.map((b) => (
                 <tr key={b.id}>
                   {/* Code & Date */}
                   <td>
@@ -281,6 +297,74 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Bar */}
+      {totalItems > 0 && (
+        <div className="admin-pagination">
+          <div className="admin-pagination-info">
+            Showing <strong>{startIndex + 1}</strong> - <strong>{endIndex}</strong> of <strong>{totalItems}</strong> bookings
+            <div style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '14px', gap: '6px' }}>
+              <span style={{ fontSize: '11px', color: '#64748b' }}>Per page:</span>
+              <select
+                className="admin-select"
+                style={{ height: '28px', padding: '0 6px', fontSize: '11px' }}
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="admin-pagination-controls">
+            <button
+              className="admin-page-btn"
+              disabled={safeCurrentPage <= 1}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              title="Previous Page"
+            >
+              <ChevronLeft size={14} />
+              <span>Prev</span>
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((page) => {
+                if (totalPages <= 7) return true;
+                if (page === 1 || page === totalPages) return true;
+                return Math.abs(page - safeCurrentPage) <= 1;
+              })
+              .map((page, idx, arr) => {
+                const showEllipsisBefore = idx > 0 && page - arr[idx - 1] > 1;
+                return (
+                  <React.Fragment key={page}>
+                    {showEllipsisBefore && (
+                      <span style={{ color: '#64748b', padding: '0 4px', fontSize: '12px' }}>...</span>
+                    )}
+                    <button
+                      className={`admin-page-btn ${page === safeCurrentPage ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+            <button
+              className="admin-page-btn"
+              disabled={safeCurrentPage >= totalPages}
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              title="Next Page"
+            >
+              <span>Next</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

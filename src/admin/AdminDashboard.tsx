@@ -27,7 +27,7 @@ export const AdminDashboard: React.FC = () => {
   // TanStack Query for users, events, and bookings count & syncing
   const { data: usersData } = useUsers({ limit: 100 });
   const { data: eventsData } = useEvents({ limit: 100 });
-  const { data: bookingsData } = useBookings();
+  const { data: bookingsData } = useBookings({ limit: 100 });
   const updateBookingMutation = useUpdateBookingStatus();
   const deleteBookingMutation = useDeleteBooking();
 

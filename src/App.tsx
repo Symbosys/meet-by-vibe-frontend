@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import AdminDashboard from './admin/AdminDashboard';
 import CreateEventScreen from './admin/CreateEventScreen';
 import { LegalPage } from './partner/LegalPage';
@@ -46,6 +47,7 @@ function AppRoutes() {
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-center" richColors closeButton />
       <AppRoutes />
     </BrowserRouter>
   );

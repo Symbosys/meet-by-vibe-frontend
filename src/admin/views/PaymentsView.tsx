@@ -3,6 +3,8 @@ import {
     Calendar as CalendarIcon,
     Check,
     CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
     Copy,
     Edit3,
     Eye,
@@ -269,6 +271,22 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
       const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
+
+  // Table Pagination States
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, pageSize]);
+
+  const totalItems = transactions.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedTransactions = transactions.slice(startIndex, endIndex);
 
   const handleVerifyTransaction = async (bookingId: string) => {
     try {
@@ -935,7 +953,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
                   </td>
                 </tr>
               ) : (
-                transactions.map((tx, idx) => (
+                paginatedTransactions.map((tx, idx) => (
                   <tr
                     key={tx.id}
                     style={{
@@ -947,7 +965,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
                   >
                     {/* Index */}
                     <td style={{ padding: '12px 10px', color: '#64748b', fontWeight: 600 }}>
-                      {idx + 1}
+                      {startIndex + idx + 1}
                     </td>
 
                     {/* User */}
@@ -1093,6 +1111,74 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({ bookings }) => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Bar */}
+        {totalItems > 0 && (
+          <div className="admin-pagination">
+            <div className="admin-pagination-info">
+              Showing <strong>{startIndex + 1}</strong> - <strong>{endIndex}</strong> of <strong>{totalItems}</strong> transactions
+              <div style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '14px', gap: '6px' }}>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>Per page:</span>
+                <select
+                  className="admin-select"
+                  style={{ height: '28px', padding: '0 6px', fontSize: '11px' }}
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="admin-pagination-controls">
+              <button
+                className="admin-page-btn"
+                disabled={safeCurrentPage <= 1}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                title="Previous Page"
+              >
+                <ChevronLeft size={14} />
+                <span>Prev</span>
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => {
+                  if (totalPages <= 7) return true;
+                  if (page === 1 || page === totalPages) return true;
+                  return Math.abs(page - safeCurrentPage) <= 1;
+                })
+                .map((page, idx, arr) => {
+                  const showEllipsisBefore = idx > 0 && page - arr[idx - 1] > 1;
+                  return (
+                    <React.Fragment key={page}>
+                      {showEllipsisBefore && (
+                        <span style={{ color: '#64748b', padding: '0 4px', fontSize: '12px' }}>...</span>
+                      )}
+                      <button
+                        className={`admin-page-btn ${page === safeCurrentPage ? 'active' : ''}`}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+
+              <button
+                className="admin-page-btn"
+                disabled={safeCurrentPage >= totalPages}
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                title="Next Page"
+              >
+                <span>Next</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MODAL 1: View Full QR Code */}
