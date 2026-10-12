@@ -23,6 +23,7 @@ import type { Gender } from '../../admin/types/admin.types';
 import { useInitiateBooking, useSubmitPaymentProof } from '../../hooks/useBookings';
 import { useActiveQRCode } from '../../hooks/useQR';
 import { compressImage } from '../../utils/imageCompression';
+import { fetchCurrentLocationViaOlaMaps } from '../../utils/olaMaps';
 import type { GarbaEvent, GarbaPartner } from '../types/partner.types';
 import { getPartnerAge } from '../utils/age.util';
 
@@ -40,6 +41,28 @@ export const TIME_SLOT_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   };
 });
 
+// Calculates end time automatically for 5 hours from start time
+export const calculateEndTime5Hours = (start24: string): string => {
+  const parts = start24.split(':');
+  const h = parseInt(parts[0], 10) || 0;
+  const m = parts[1] || '00';
+  const endH = (h + 5) % 24;
+  return `${endH < 10 ? '0' + endH : endH}:${m}`;
+};
+
+// Calculates duration in hours between two 24h timestamps (supports overnight)
+export const calculateDurationHours = (start24: string, end24: string): number => {
+  try {
+    const [startH, startM] = start24.split(':').map(Number);
+    const [endH, endM] = end24.split(':').map(Number);
+    let diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+    if (diffMinutes <= 0) diffMinutes += 24 * 60; // overnight event
+    return Math.round((diffMinutes / 60) * 10) / 10;
+  } catch {
+    return 5;
+  }
+};
+
 interface BookPerformerModalProps {
   partner: GarbaPartner | null;
   events: GarbaEvent[];
@@ -50,7 +73,7 @@ interface BookPerformerModalProps {
 
 export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   partner,
-  events,
+  events: _events,
   isOpen,
   onClose,
   onBookingComplete,
@@ -85,14 +108,46 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const [proofOriginalSizeKB, setProofOriginalSizeKB] = useState<number | null>(null);
   const proofFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Event & Slot Timings
+  // Event & Slot Timings (Default: 5 hours slot)
   const [bookingDate, setBookingDate] = useState('2026-10-18');
   const [startTime, setStartTime] = useState('19:00');
-  const [endTime, setEndTime] = useState('23:00');
-  const [durationHours, setDurationHours] = useState(4);
-  const [eventAddress, setEventAddress] = useState(events[0]?.venue || '');
+  const [endTime, setEndTime] = useState('00:00');
+  const [durationHours, setDurationHours] = useState(5);
+  const [eventAddress, setEventAddress] = useState('');
   const [city, setCity] = useState('');
   const [notes, setNotes] = useState('');
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
+
+  // Auto-fetch Client Billing / Residential Address using Ola Maps API
+  const handleAutoFetchLocation = async () => {
+    setIsFetchingLocation(true);
+    try {
+      // 1. Immediately read any stored address from localStorage if available
+      try {
+        const savedAddr = localStorage.getItem('meetbyvibe_user_address');
+        if (savedAddr) setAddress(savedAddr);
+      } catch {}
+
+      // 2. Fetch fresh live GPS/reverse-geocoded location via Ola Maps
+      const loc = await fetchCurrentLocationViaOlaMaps();
+      if (loc) {
+        if (loc.formattedAddress) {
+          setAddress(loc.formattedAddress);
+          try { localStorage.setItem('meetbyvibe_user_address', loc.formattedAddress); } catch {}
+        } else if (loc.locality || loc.city) {
+          const fallbackAddr = [loc.locality, loc.city, loc.state].filter(Boolean).join(', ');
+          if (fallbackAddr) {
+            setAddress(fallbackAddr);
+            try { localStorage.setItem('meetbyvibe_user_address', fallbackAddr); } catch {}
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Auto-fetch location via Ola Maps failed:', err);
+    } finally {
+      setIsFetchingLocation(false);
+    }
+  };
 
   // Fixed Booking Fee
   const bookingFee = partner?.hourlyRate ? Number(partner.hourlyRate) : 399;
@@ -100,12 +155,36 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   // Payment state
   const [createdBookingId, setCreatedBookingId] = useState<string>('');
   const [bookingCode, setBookingCode] = useState('');
-  const [dynamicQrUrl, setDynamicQrUrl] = useState<string>('');
-  const [dynamicUpiPayload, setDynamicUpiPayload] = useState<string>('');
   const [utrNumber, setUtrNumber] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(900); // 15 mins
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // When start time is selected, end time is automatically set to 5 hours later
+  const handleStartTimeChange = (newStart: string) => {
+    setStartTime(newStart);
+    const autoEnd = calculateEndTime5Hours(newStart);
+    setEndTime(autoEnd);
+    setDurationHours(5);
+  };
+
+  // When end time is selected, strictly prevent booking for more than 5 hours
+  const handleEndTimeChange = (newEnd: string) => {
+    const dur = calculateDurationHours(startTime, newEnd);
+    if (dur > 5) {
+      setEndTime(calculateEndTime5Hours(startTime));
+      setDurationHours(5);
+    } else {
+      setEndTime(newEnd);
+      setDurationHours(Math.max(1, Math.round(dur)));
+    }
+  };
+
+  // Filter end time options so user cannot select more than 5 hours from start time
+  const validEndTimeOptions = TIME_SLOT_OPTIONS.filter((slot) => {
+    const dur = calculateDurationHours(startTime, slot.value);
+    return dur > 0 && dur <= 5;
+  });
 
   useEffect(() => {
     if (isOpen) {
@@ -115,6 +194,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       setCopiedUpi(false);
       setTimeLeftSeconds(900);
       setCreatedBookingId('');
+      setBookingCode('');
       setUtrNumber('');
       setProofFile(null);
       setProofPreviewUrl('');
@@ -123,27 +203,28 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       setName('');
       setEmail('');
       setPhone('');
-      setAddress('');
       setAvatarUrl('');
       setAvatarFile(null);
       setCompressedSizeKB(null);
       setNotes('');
-      // City starts empty by default, client specifies their event location city
+      // City remains empty by default, user will manually fill that
       setCity('');
+      // Event ground / venue address is manually filled by the client
+      setEventAddress('');
+      // Default to 19:00 - 00:00 (5 hours)
+      setStartTime('19:00');
+      setEndTime('00:00');
+      setDurationHours(5);
+
+      // Auto-fetch Client Billing / Residential Address using Ola Maps
+      handleAutoFetchLocation();
     }
   }, [isOpen, partner, refetchActiveQR]);
 
   // Recalculate duration when time changes
   useEffect(() => {
-    try {
-      const [startH] = startTime.split(':').map(Number);
-      const [endH] = endTime.split(':').map(Number);
-      let diff = endH - startH;
-      if (diff <= 0) diff += 24; // overnight event
-      setDurationHours(Math.max(1, diff));
-    } catch {
-      setDurationHours(4);
-    }
+    const dur = calculateDurationHours(startTime, endTime);
+    setDurationHours(Math.max(1, Math.round(dur)));
   }, [startTime, endTime]);
 
   // Timer for QR Payment
@@ -270,21 +351,39 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const fallbackUpiPayload = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${bookingFee}&tn=${encodeURIComponent(`Booking ${bookingCode || 'GARBA'}`)}&cu=INR`;
   
   // Prioritize the actual QR code uploaded by the admin
-  const qrCodeUrl = activeQR?.imageUrl || dynamicQrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(dynamicUpiPayload || fallbackUpiPayload)}`;
+  const qrCodeUrl = activeQR?.imageUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(fallbackUpiPayload)}`;
 
-  const handleProceedToPayment = async (e: React.FormEvent) => {
+  // Step 1: Proceed to QR Payment - validates details locally without triggering booking creation API
+  const handleProceedToPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !phone.trim() || !address.trim()) {
       setErrorMsg('Please complete all client contact & address details.');
       return;
     }
+    setErrorMsg(null);
+    setStep('payment');
+  };
+
+  // Step 2: Final API Call - initiates booking and submits payment proof (screenshot + UTR)
+  const handleConfirmPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!proofFile && !proofPreviewUrl) {
+      setErrorMsg('Please upload your payment screenshot proof before confirming.');
+      return;
+    }
+    if (!utrNumber.trim() || utrNumber.trim().length < 6) {
+      setErrorMsg('Please enter valid 12-digit UPI UTR / Bank Reference number.');
+      return;
+    }
 
     try {
       setErrorMsg(null);
+
       // Clean ISO timestamp strings
       const startDateTime = `${bookingDate}T${startTime}:00.000Z`;
       const endDateTime = `${bookingDate}T${endTime}:00.000Z`;
 
+      // 1. Create booking in database with all details filled by user
       const response = await initiateBooking.mutateAsync({
         name,
         email,
@@ -301,61 +400,37 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
         notes,
       });
 
-      if (response && response.booking) {
-        setCreatedBookingId(response.booking.id);
-        setBookingCode(response.booking.bookingCode);
-        if (response.payment?.qrCodeUrl) {
-          setDynamicQrUrl(response.payment.qrCodeUrl);
-        }
-        if (response.payment?.upiPayload) {
-          setDynamicUpiPayload(response.payment.upiPayload);
-        }
-        setStep('payment');
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || err.message || 'Failed to initiate booking. Please try again.';
-      setErrorMsg(msg);
-    }
-  };
+      const finalBookingId = response?.booking?.id || '';
+      const finalBookingCode = response?.booking?.bookingCode || '';
+      setCreatedBookingId(finalBookingId);
+      setBookingCode(finalBookingCode);
 
-  const handleConfirmPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!proofFile && !proofPreviewUrl) {
-      setErrorMsg('Please upload your payment screenshot proof before confirming.');
-      return;
-    }
-    if (!utrNumber.trim() || utrNumber.trim().length < 6) {
-      setErrorMsg('Please enter valid 12-digit UPI UTR / Bank Reference number.');
-      return;
-    }
-
-    try {
-      setErrorMsg(null);
-      if (createdBookingId) {
+      // 2. Submit payment proof (screenshot and UTR number) for this booking
+      if (finalBookingId) {
         if (proofFile) {
           const formData = new FormData();
           formData.append('utrNumber', utrNumber.trim());
           formData.append('screenshot', proofFile);
           await submitPaymentProof.mutateAsync({
-            id: createdBookingId,
+            id: finalBookingId,
             payload: formData,
           });
         } else if (proofPreviewUrl) {
           await submitPaymentProof.mutateAsync({
-            id: createdBookingId,
+            id: finalBookingId,
             payload: { utrNumber: utrNumber.trim(), paymentScreenshotUrl: proofPreviewUrl },
           });
         } else {
           await submitPaymentProof.mutateAsync({
-            id: createdBookingId,
+            id: finalBookingId,
             payload: { utrNumber: utrNumber.trim() },
           });
         }
       }
 
       const bookingRecord = {
-        id: createdBookingId,
-        bookingCode,
+        id: finalBookingId,
+        bookingCode: finalBookingCode,
         name,
         email,
         phone,
@@ -381,7 +456,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       if (onBookingComplete) onBookingComplete(bookingRecord);
       setStep('success');
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err.message || 'Failed to submit payment verification. Please try again.';
+      const msg = err?.response?.data?.message || err.message || 'Failed to complete booking and payment verification. Please try again.';
       setErrorMsg(msg);
     }
   };
@@ -418,7 +493,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
             <h3 className="partner-modal-title book-modal-title">
               {step === 'form' && `Book Performer: ${partner.name}`}
               {step === 'payment' && `UPI Payment & Slot Confirmation`}
-              {step === 'success' && `Booking Successfully Confirmed!`}
+              {step === 'success' && `Payment Under Verification`}
             </h3>
           </div>
           <button className="partner-round-arrow-btn" onClick={onClose} aria-label="Close modal">
@@ -450,7 +525,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       {partner.name}, {partner.age || getPartnerAge(partner.id, partner.name)}
                     </div>
                     <div className="book-performer-sub">
-                      📍 {partner.city} • 👑 {partner.mySkill}
+                       👑 {partner.mySkill}
                     </div>
                   </div>
                 </div>
@@ -621,14 +696,47 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                 </div>
 
                 <div className="book-field">
-                  <label className="book-label">
-                    Client Billing / Residential Address *
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <label className="book-label" style={{ margin: 0 }}>
+                      Client Billing / Residential Address *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAutoFetchLocation}
+                      disabled={isFetchingLocation}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#ff1379',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: isFetchingLocation ? 'not-allowed' : 'pointer',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                      }}
+                      title="Auto-fetch current location via Ola Maps"
+                    >
+                      {isFetchingLocation ? (
+                        <>
+                          <Loader2 size={11} className="animate-spin" />
+                          <span>Fetching via Ola Maps...</span>
+                        </>
+                      ) : (
+                        <>
+                          <MapPin size={11} />
+                          <span>Auto-fetch via Ola Maps</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <input
                     type="text"
                     className="book-input"
                     required
-                    placeholder="Enter flat / house no., street, locality"
+                    placeholder={isFetchingLocation ? 'Fetching address via Ola Maps...' : 'Enter flat / house no., street, locality'}
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                   />
@@ -667,7 +775,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       className="book-select"
                       required
                       value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
+                      onChange={(e) => handleStartTimeChange(e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                     >
                       {TIME_SLOT_OPTIONS.map((slot) => (
@@ -687,10 +795,10 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       className="book-select"
                       required
                       value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
+                      onChange={(e) => handleEndTimeChange(e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {TIME_SLOT_OPTIONS.map((slot) => (
+                      {validEndTimeOptions.map((slot) => (
                         <option key={`end-${slot.value}`} value={slot.value}>
                           {slot.label}
                         </option>
@@ -721,6 +829,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                     <input
                       type="text"
                       className="book-input"
+                      placeholder="Enter event ground / venue address"
                       value={eventAddress}
                       onChange={(e) => setEventAddress(e.target.value)}
                     />
@@ -767,21 +876,12 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
             </div>
 
             <div className="partner-modal-footer book-modal-footer">
-              <button type="button" className="btn-partner-outline" onClick={onClose} disabled={initiateBooking.isPending}>
+              <button type="button" className="btn-partner-outline" onClick={onClose}>
                 Cancel
               </button>
-              <button type="submit" className="btn-partner-primary" disabled={initiateBooking.isPending || isCompressingAvatar}>
-                {initiateBooking.isPending ? (
-                  <>
-                    <Loader2 size={15} className="animate-spin" />
-                    <span>Locking Slot & Generating QR...</span>
-                  </>
-                ) : (
-                  <>
-                    <CreditCard size={15} />
-                    <span>Proceed to QR Payment (₹{bookingFee})</span>
-                  </>
-                )}
+              <button type="submit" className="btn-partner-primary" disabled={isCompressingAvatar}>
+                <CreditCard size={15} />
+                <span>Proceed to QR Payment (₹{bookingFee})</span>
               </button>
             </div>
           </form>
@@ -806,7 +906,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                     alt={name}
                     className="book-payment-client-avatar"
                   />
-                  <span>Booking ID: <strong style={{ color: '#0f172a' }}>{bookingCode}</strong></span>
+                  <span>Booking ID: <strong style={{ color: '#0f172a' }}>{bookingCode || 'Pending'}</strong></span>
                 </div>
                 <div className="book-payment-countdown">
                   <Clock size={14} />
@@ -855,7 +955,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
               {/* UTR Number Input */}
               <div className="book-utr-card">
                 <label className="book-label" style={{ color: '#0f172a' }}>
-                  Enter 12-Digit Bank UTR / Transaction Reference ID *
+                  Enter Digit Bank UTR / Transaction Reference ID *
                 </label>
                 <input
                   type="text"
@@ -965,27 +1065,49 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
             </div>
 
             <div className="partner-modal-footer book-modal-footer">
-              <button type="button" className="btn-partner-outline" onClick={() => setStep('form')} disabled={submitPaymentProof.isPending || isCompressingProof}>
+              <button
+                type="button"
+                className="btn-partner-outline"
+                onClick={() => setStep('form')}
+                disabled={initiateBooking.isPending || submitPaymentProof.isPending || isCompressingProof}
+              >
                 Back to Details
               </button>
               <button
                 type="submit"
                 className="btn-partner-primary"
-                disabled={submitPaymentProof.isPending || isCompressingProof || (!proofFile && !proofPreviewUrl)}
+                disabled={
+                  initiateBooking.isPending ||
+                  submitPaymentProof.isPending ||
+                  isCompressingProof ||
+                  (!proofFile && !proofPreviewUrl)
+                }
                 style={{
-                  opacity: (submitPaymentProof.isPending || isCompressingProof || (!proofFile && !proofPreviewUrl)) ? 0.6 : 1,
-                  cursor: (submitPaymentProof.isPending || isCompressingProof || (!proofFile && !proofPreviewUrl)) ? 'not-allowed' : 'pointer',
+                  opacity:
+                    initiateBooking.isPending ||
+                    submitPaymentProof.isPending ||
+                    isCompressingProof ||
+                    (!proofFile && !proofPreviewUrl)
+                      ? 0.6
+                      : 1,
+                  cursor:
+                    initiateBooking.isPending ||
+                    submitPaymentProof.isPending ||
+                    isCompressingProof ||
+                    (!proofFile && !proofPreviewUrl)
+                      ? 'not-allowed'
+                      : 'pointer',
                 }}
               >
-                {submitPaymentProof.isPending ? (
+                {initiateBooking.isPending || submitPaymentProof.isPending ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    <span>Verifying & Uploading Proof...</span>
+                    <span>Confirming Booking & Verifying Proof...</span>
                   </>
                 ) : (
                   <>
                     <CheckCircle2 size={16} />
-                    <span>Verify Payment & Confirm</span>
+                    <span>Confirm Booking</span>
                   </>
                 )}
               </button>
@@ -993,16 +1115,46 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
           </form>
         )}
 
-        {/* STEP 3: Success Confirmation */}
+        {/* STEP 3: Payment Under Verification Confirmation */}
         {step === 'success' && (
           <div className="book-success-card">
-            <CheckCircle2 size={54} color="#10b981" className="book-success-icon" />
-            <h2 className="book-success-heading">
-              Booking Confirmed! 🎉
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: '#fffbeb',
+              border: '2px solid #fde68a',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 14px auto',
+            }}>
+              <Clock size={34} color="#d97706" />
+            </div>
+            <h2 className="book-success-heading" style={{ color: '#0f172a', fontSize: '22px', fontWeight: 800 }}>
+              Payment Under Verification
             </h2>
-            <p className="book-success-sub">
-              Performer <strong>{partner.name}</strong> is reserved for <strong>{bookingDate} ({startTime} - {endTime})</strong>.
+            <p className="book-success-sub" style={{ fontSize: '14px', color: '#475569', lineHeight: 1.5, maxWidth: '420px', margin: '0 auto 16px auto' }}>
+              Once payment gets verified you will receive email and partner will contact you.
             </p>
+
+            <div style={{
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              maxWidth: '380px',
+              margin: '0 auto 16px auto',
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px'
+            }}>
+              <ShieldCheck size={18} color="#2563eb" style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div style={{ fontSize: '12px', color: '#1e40af', lineHeight: 1.4 }}>
+                <strong>Verification in progress:</strong> Your payment proof has been submitted. Once payment gets verified you will receive email and partner {partner.name} will contact you.
+              </div>
+            </div>
 
             <div className="book-success-details-box">
               {/* Client Snapshot with Avatar */}
@@ -1018,7 +1170,12 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                 </div>
               </div>
 
+              <div className="book-success-meta-row">Performer: <strong>{partner.name}</strong></div>
+              <div className="book-success-meta-row">Event Slot: <strong>{bookingDate} ({startTime} - {endTime})</strong></div>
               <div className="book-success-meta-row">Booking Code: <strong style={{ color: '#ff1379' }}>{bookingCode}</strong></div>
+              {createdBookingId && (
+                <div className="book-success-meta-row">Booking Ref: <code style={{ color: '#64748b' }}>{createdBookingId}</code></div>
+              )}
               <div className="book-success-meta-row">Booking Fee Paid: <strong style={{ color: '#059669' }}>₹{bookingFee}</strong></div>
               <div className="book-success-meta-row">UTR Reference: <code style={{ color: '#0284c7' }}>{utrNumber}</code></div>
 
@@ -1030,24 +1187,24 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                     alt="Receipt"
                     className="book-success-proof-thumb"
                   />
-                  <div className="book-success-proof-status">
-                    Payment screenshot verified (&lt;100 KB)
+                  <div className="book-success-proof-status" style={{ color: '#d97706', fontWeight: 600 }}>
+                    Payment screenshot submitted for verification
                   </div>
                 </div>
               )}
             </div>
 
-              <div>
-                <button
-                  className="btn-partner-primary"
-                  style={{ padding: '10px 24px', width: 'auto', margin: '0 auto' }}
-                  onClick={onClose}
-                >
-                  Done / Back to Portal
-                </button>
-              </div>
+            <div>
+              <button
+                className="btn-partner-primary"
+                style={{ padding: '10px 24px', width: 'auto', margin: '0 auto' }}
+                onClick={onClose}
+              >
+                Done / Back to Portal
+              </button>
             </div>
-          )}
+          </div>
+        )}
       </div>
     </div>
   );
