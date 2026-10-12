@@ -26,6 +26,20 @@ import { compressImage } from '../../utils/imageCompression';
 import type { GarbaEvent, GarbaPartner } from '../types/partner.types';
 import { getPartnerAge } from '../utils/age.util';
 
+// Clean 30-minute interval format with clean standard labels
+export const TIME_SLOT_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? '00' : '30';
+  const val = `${h < 10 ? '0' + h : h}:${m}`;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  const hDisplay = h12 < 10 ? `0${h12}` : `${h12}`;
+  return {
+    value: val,
+    label: `${hDisplay}:${m} ${period}`,
+  };
+});
+
 interface BookPerformerModalProps {
   partner: GarbaPartner | null;
   events: GarbaEvent[];
@@ -77,7 +91,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   const [endTime, setEndTime] = useState('23:00');
   const [durationHours, setDurationHours] = useState(4);
   const [eventAddress, setEventAddress] = useState(events[0]?.venue || '');
-  const [city, setCity] = useState(partner?.city || '');
+  const [city, setCity] = useState('');
   const [notes, setNotes] = useState('');
 
   // Fixed Booking Fee
@@ -114,9 +128,8 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       setAvatarFile(null);
       setCompressedSizeKB(null);
       setNotes('');
-      if (partner) {
-        setCity(partner.city);
-      }
+      // City starts empty by default, client specifies their event location city
+      setCity('');
     }
   }, [isOpen, partner, refetchActiveQR]);
 
@@ -142,6 +155,22 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       return () => clearInterval(timer);
     }
   }, [step, timeLeftSeconds]);
+
+  // Handle mobile browser / in-app webview back button to safely dismiss modal without leaving the page
+  useEffect(() => {
+    if (!isOpen) return;
+
+    window.history.pushState({ modal: 'bookPerformer' }, '');
+
+    const handlePopState = () => {
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isOpen, onClose]);
 
   // Handle Client Profile Picture File Upload with 100 KB compression
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -370,7 +399,14 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   };
 
   return (
-    <div className="partner-modal-overlay" onClick={onClose}>
+    <div 
+      className="partner-modal-overlay" 
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div 
         className="partner-modal-card book-modal-card" 
         onClick={(e) => e.stopPropagation()}
@@ -607,7 +643,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                 </div>
 
                 <div className="book-form-grid-3">
-                  <div className="book-field">
+                  <div className="book-field book-field-date">
                     <label className="book-label">
                       <Calendar size={12} color="#ff1379" />
                       <span>Booking Date *</span>
@@ -618,6 +654,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       required
                       value={bookingDate}
                       onChange={(e) => setBookingDate(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </div>
 
@@ -626,13 +663,19 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       <Clock size={12} color="#ff1379" />
                       <span>Start Time *</span>
                     </label>
-                    <input
-                      type="time"
-                      className="book-input"
+                    <select
+                      className="book-select"
                       required
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
-                    />
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {TIME_SLOT_OPTIONS.map((slot) => (
+                        <option key={`start-${slot.value}`} value={slot.value}>
+                          {slot.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="book-field">
@@ -640,14 +683,26 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       <Clock size={12} color="#ff1379" />
                       <span>End Time *</span>
                     </label>
-                    <input
-                      type="time"
-                      className="book-input"
+                    <select
+                      className="book-select"
                       required
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
-                    />
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {TIME_SLOT_OPTIONS.map((slot) => (
+                        <option key={`end-${slot.value}`} value={slot.value}>
+                          {slot.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
+                </div>
+
+                {/* Duration indicator */}
+                <div className="book-duration-strip">
+                  <Clock size={12} color="#ff1379" />
+                  <span>Event Duration: <strong>{durationHours} Hours</strong></span>
                 </div>
               </div>
 
@@ -678,6 +733,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                     <input
                       type="text"
                       className="book-input"
+                      placeholder="Enter event city"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                     />
@@ -981,17 +1037,17 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
               )}
             </div>
 
-            <div>
-              <button
-                className="btn-partner-primary"
-                style={{ padding: '10px 24px', width: 'auto', margin: '0 auto' }}
-                onClick={onClose}
-              >
-                Done / Back to Portal
-              </button>
+              <div>
+                <button
+                  className="btn-partner-primary"
+                  style={{ padding: '10px 24px', width: 'auto', margin: '0 auto' }}
+                  onClick={onClose}
+                >
+                  Done / Back to Portal
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
     </div>
   );

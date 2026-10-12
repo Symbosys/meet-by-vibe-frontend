@@ -25,8 +25,8 @@ export const LegalPage: React.FC = () => {
       <PartnerNavbar
         searchQuery=""
         onSearchChange={() => {}}
-        selectedState="Jharkhand"
-        selectedCity="Ranchi"
+        selectedState=""
+        selectedCity=""
         isLocating={false}
         locationDetected={false}
         onDetectLocation={() => {}}
@@ -347,7 +347,7 @@ export const LegalPage: React.FC = () => {
         </div>
       </main>
 
-      <PartnerFooter selectedCity="Ranchi" />
+      <PartnerFooter selectedCity="" />
     </div>
   );
 };
