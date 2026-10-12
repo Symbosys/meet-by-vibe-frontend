@@ -60,14 +60,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
   };
 
   return (
-    <div 
-      className="partner-modal-overlay" 
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
+    <div className="partner-modal-overlay" onClick={onClose}>
       <div 
         className="partner-modal-card" 
         style={{ maxWidth: '480px', display: 'flex', flexDirection: 'column' }} 

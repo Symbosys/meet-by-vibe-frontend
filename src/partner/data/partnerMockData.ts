@@ -1,4 +1,4 @@
-import type { GarbaPartner, GarbaEvent, PartnerRequest } from '../types/partner.types';
+import type { GarbaEvent, GarbaPartner, PartnerRequest } from '../types/partner.types';
 
 export const CURRENT_USER = {
   id: 'u-aarohi',
@@ -6,9 +6,9 @@ export const CURRENT_USER = {
   fullName: 'Aarohi Sen',
   avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
   isPremium: true,
-  state: '',
-  stateCode: '',
-  city: '',
+  state: 'Jharkhand',
+  stateCode: 'JH',
+  city: 'Ranchi',
   unreadNotifications: 2,
   unreadMessages: 5,
 };

@@ -26,58 +26,6 @@ import { compressImage } from '../../utils/imageCompression';
 import type { GarbaEvent, GarbaPartner } from '../types/partner.types';
 import { getPartnerAge } from '../utils/age.util';
 
-// Predefined 30-minute intervals for safe, mobile-friendly slot booking without native picker crashes
-const TIME_SLOT_OPTIONS = [
-  { value: '00:00', label: '12:00 AM (Midnight)' },
-  { value: '00:30', label: '12:30 AM' },
-  { value: '01:00', label: '01:00 AM' },
-  { value: '01:30', label: '01:30 AM' },
-  { value: '02:00', label: '02:00 AM' },
-  { value: '02:30', label: '02:30 AM' },
-  { value: '03:00', label: '03:00 AM' },
-  { value: '03:30', label: '03:30 AM' },
-  { value: '04:00', label: '04:00 AM' },
-  { value: '04:30', label: '04:30 AM' },
-  { value: '05:00', label: '05:00 AM' },
-  { value: '05:30', label: '05:30 AM' },
-  { value: '06:00', label: '06:00 AM' },
-  { value: '06:30', label: '06:30 AM' },
-  { value: '07:00', label: '07:00 AM' },
-  { value: '07:30', label: '07:30 AM' },
-  { value: '08:00', label: '08:00 AM' },
-  { value: '08:30', label: '08:30 AM' },
-  { value: '09:00', label: '09:00 AM' },
-  { value: '09:30', label: '09:30 AM' },
-  { value: '10:00', label: '10:00 AM' },
-  { value: '10:30', label: '10:30 AM' },
-  { value: '11:00', label: '11:00 AM' },
-  { value: '11:30', label: '11:30 AM' },
-  { value: '12:00', label: '12:00 PM (Noon)' },
-  { value: '12:30', label: '12:30 PM' },
-  { value: '13:00', label: '01:00 PM' },
-  { value: '13:30', label: '01:30 PM' },
-  { value: '14:00', label: '02:00 PM' },
-  { value: '14:30', label: '02:30 PM' },
-  { value: '15:00', label: '03:00 PM' },
-  { value: '15:30', label: '03:30 PM' },
-  { value: '16:00', label: '04:00 PM' },
-  { value: '16:30', label: '04:30 PM' },
-  { value: '17:00', label: '05:00 PM' },
-  { value: '17:30', label: '05:30 PM' },
-  { value: '18:00', label: '06:00 PM' },
-  { value: '18:30', label: '06:30 PM' },
-  { value: '19:00', label: '07:00 PM (Evening)' },
-  { value: '19:30', label: '07:30 PM' },
-  { value: '20:00', label: '08:00 PM' },
-  { value: '20:30', label: '08:30 PM' },
-  { value: '21:00', label: '09:00 PM (Prime Slot)' },
-  { value: '21:30', label: '09:30 PM' },
-  { value: '22:00', label: '10:00 PM' },
-  { value: '22:30', label: '10:30 PM' },
-  { value: '23:00', label: '11:00 PM' },
-  { value: '23:30', label: '11:30 PM' },
-];
-
 interface BookPerformerModalProps {
   partner: GarbaPartner | null;
   events: GarbaEvent[];
@@ -194,22 +142,6 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
       return () => clearInterval(timer);
     }
   }, [step, timeLeftSeconds]);
-
-  // Handle mobile browser / webview back button to safely dismiss modal without leaving the page
-  useEffect(() => {
-    if (!isOpen) return;
-
-    window.history.pushState({ modal: 'bookPerformer' }, '');
-
-    const handlePopState = () => {
-      onClose();
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [isOpen, onClose]);
 
   // Handle Client Profile Picture File Upload with 100 KB compression
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -438,14 +370,7 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
   };
 
   return (
-    <div 
-      className="partner-modal-overlay" 
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
+    <div className="partner-modal-overlay" onClick={onClose}>
       <div 
         className="partner-modal-card book-modal-card" 
         onClick={(e) => e.stopPropagation()}
@@ -693,7 +618,6 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       required
                       value={bookingDate}
                       onChange={(e) => setBookingDate(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
                     />
                   </div>
 
@@ -702,19 +626,13 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       <Clock size={12} color="#ff1379" />
                       <span>Start Time *</span>
                     </label>
-                    <select
-                      className="book-select"
+                    <input
+                      type="time"
+                      className="book-input"
                       required
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {TIME_SLOT_OPTIONS.map((slot) => (
-                        <option key={`start-${slot.value}`} value={slot.value}>
-                          {slot.label}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
 
                   <div className="book-field">
@@ -722,19 +640,13 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
                       <Clock size={12} color="#ff1379" />
                       <span>End Time *</span>
                     </label>
-                    <select
-                      className="book-select"
+                    <input
+                      type="time"
+                      className="book-input"
                       required
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {TIME_SLOT_OPTIONS.map((slot) => (
-                        <option key={`end-${slot.value}`} value={slot.value}>
-                          {slot.label}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
                 </div>
               </div>

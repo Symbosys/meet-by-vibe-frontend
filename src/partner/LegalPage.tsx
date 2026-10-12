@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, Scale, Lock, AlertCircle, CheckCircle, Mail, MapPin } from 'lucide-react';
-import { PartnerNavbar } from './components/PartnerNavbar';
+import { AlertCircle, ArrowLeft, CheckCircle, Lock, Mail, MapPin, Scale, ShieldCheck } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { PartnerFooter } from './components/PartnerFooter';
+import { PartnerNavbar } from './components/PartnerNavbar';
 
 export const LegalPage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,8 +25,8 @@ export const LegalPage: React.FC = () => {
       <PartnerNavbar
         searchQuery=""
         onSearchChange={() => {}}
-        selectedState=""
-        selectedCity=""
+        selectedState="Jharkhand"
+        selectedCity="Ranchi"
         isLocating={false}
         locationDetected={false}
         onDetectLocation={() => {}}
@@ -347,7 +347,7 @@ export const LegalPage: React.FC = () => {
         </div>
       </main>
 
-      <PartnerFooter selectedCity="" />
+      <PartnerFooter selectedCity="Ranchi" />
     </div>
   );
 };

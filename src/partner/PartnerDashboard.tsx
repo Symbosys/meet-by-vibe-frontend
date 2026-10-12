@@ -15,6 +15,7 @@ import { PartnerProfileModal } from './components/PartnerProfileModal';
 import { RecommendedPartnersSection } from './components/RecommendedPartnersSection';
 // import { UpcomingEventsSection } from './components/UpcomingEventsSection';
 import {
+  CURRENT_USER,
   INITIAL_REQUESTS,
 } from './data/partnerMockData';
 import './partner.css';
@@ -84,40 +85,35 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
   const [selectedLocality, setSelectedLocality] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('meetbyvibe_user_locality');
-      if (saved && saved !== 'Ranchi' && saved !== 'Albert Ekka Chowk') return saved;
-      localStorage.removeItem('meetbyvibe_user_locality');
+      if (saved) return saved;
     } catch {}
     return '';
   });
   const [selectedAddress, setSelectedAddress] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('meetbyvibe_user_address');
-      if (saved && !saved.toLowerCase().includes('ranchi')) return saved;
-      localStorage.removeItem('meetbyvibe_user_address');
+      if (saved) return saved;
     } catch {}
     return '';
   });
   const [selectedState, setSelectedState] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('meetbyvibe_user_state');
-      if (saved && saved !== 'Jharkhand') return saved;
-      localStorage.removeItem('meetbyvibe_user_state');
+      if (saved) return saved;
     } catch {}
-    return '';
+    return CURRENT_USER.state;
   });
   const [selectedCity, setSelectedCity] = useState<string>(() => {
     try {
       const saved = localStorage.getItem('meetbyvibe_user_city');
-      if (saved && saved !== 'Ranchi') return saved;
-      localStorage.removeItem('meetbyvibe_user_city');
+      if (saved) return saved;
     } catch {}
-    return '';
+    return CURRENT_USER.city;
   });
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [locationDetected, setLocationDetected] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('meetbyvibe_user_city');
-      return !!saved && saved !== 'Ranchi';
+      return !!localStorage.getItem('meetbyvibe_user_city');
     } catch {
       return false;
     }
@@ -143,9 +139,7 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
         setSelectedCity(loc.city);
         try { localStorage.setItem('meetbyvibe_user_city', loc.city); } catch {}
       }
-      if (loc.city || loc.state) {
-        setLocationDetected(true);
-      }
+      setLocationDetected(true);
     } catch (err) {
       console.warn('Could not auto-fetch location via Ola Maps:', err);
     } finally {
