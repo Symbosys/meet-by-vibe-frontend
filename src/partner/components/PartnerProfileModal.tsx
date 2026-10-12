@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
-  CheckCircle, 
-  MapPin, 
+  CheckCircle,  
   Sparkles,
   ChevronLeft,
   ChevronRight,

@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   CheckCircle, 
-  MapPin, 
   Crown, 
   Swords, 
   Calendar, 
