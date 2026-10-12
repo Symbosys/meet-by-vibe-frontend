@@ -83,11 +83,14 @@ export const PartnerCard: React.FC<PartnerCardProps> = ({
         </div>
 
         {/* City Location & Booking Rate */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '10px' }}>
+          {/* Location commented out as requested */}
+          {/*
           <div className="partner-card-location" style={{ marginBottom: 0 }}>
             <MapPin size={13} />
             <span>{partner.city}</span>
           </div>
+          */}
 
           <div style={{ fontSize: '13px', fontWeight: 800, color: '#10b981' }}>
             ₹{partner.hourlyRate || 399}

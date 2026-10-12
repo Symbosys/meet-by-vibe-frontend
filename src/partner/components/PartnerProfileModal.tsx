@@ -170,11 +170,14 @@ export const PartnerProfileModal: React.FC<PartnerProfileModalProps> = ({
 
           {/* Meta Information Row */}
           <div className="profile-meta-row">
+            {/* Location commented out as requested */}
+            {/*
             <div className="profile-meta-item location">
               <MapPin size={14} />
               <span>{partner.city}, {partner.state}</span>
             </div>
             <span className="profile-meta-dot">•</span>
+            */}
             <div className="profile-meta-item">
               <span>Height: <strong style={{ color: '#0f172a' }}>{partner.heightCm} cm</strong></span>
             </div>
@@ -292,8 +295,10 @@ export const PartnerProfileModal: React.FC<PartnerProfileModalProps> = ({
 
         <div className="profile-lightbox-footer" onClick={(e) => e.stopPropagation()}>
           <span>Photo {selectedPhotoIndex + 1} of {photos.length}</span>
+          {/*
           <span>•</span>
           <span style={{ color: '#ff1379', fontWeight: 700 }}>{partner.city}</span>
+          */}
         </div>
       </div>
     )}
