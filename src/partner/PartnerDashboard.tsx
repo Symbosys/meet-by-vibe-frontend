@@ -82,17 +82,63 @@ interface PartnerDashboardProps {
 
 export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAdmin }) => {
   // Location State & Ola Maps Live Detection
-  const [selectedState, setSelectedState] = useState<string>(CURRENT_USER.state);
-  const [selectedCity, setSelectedCity] = useState<string>(CURRENT_USER.city);
+  const [selectedLocality, setSelectedLocality] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('meetbyvibe_user_locality');
+      if (saved) return saved;
+    } catch {}
+    return '';
+  });
+  const [selectedAddress, setSelectedAddress] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('meetbyvibe_user_address');
+      if (saved) return saved;
+    } catch {}
+    return '';
+  });
+  const [selectedState, setSelectedState] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('meetbyvibe_user_state');
+      if (saved) return saved;
+    } catch {}
+    return CURRENT_USER.state;
+  });
+  const [selectedCity, setSelectedCity] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('meetbyvibe_user_city');
+      if (saved) return saved;
+    } catch {}
+    return CURRENT_USER.city;
+  });
   const [isLocating, setIsLocating] = useState<boolean>(false);
-  const [locationDetected, setLocationDetected] = useState<boolean>(false);
+  const [locationDetected, setLocationDetected] = useState<boolean>(() => {
+    try {
+      return !!localStorage.getItem('meetbyvibe_user_city');
+    } catch {
+      return false;
+    }
+  });
 
   const handleDetectLocation = async () => {
     setIsLocating(true);
     try {
       const loc = await fetchCurrentLocationViaOlaMaps();
-      if (loc.state) setSelectedState(loc.state);
-      if (loc.city) setSelectedCity(loc.city);
+      if (loc.locality) {
+        setSelectedLocality(loc.locality);
+        try { localStorage.setItem('meetbyvibe_user_locality', loc.locality); } catch {}
+      }
+      if (loc.formattedAddress) {
+        setSelectedAddress(loc.formattedAddress);
+        try { localStorage.setItem('meetbyvibe_user_address', loc.formattedAddress); } catch {}
+      }
+      if (loc.state) {
+        setSelectedState(loc.state);
+        try { localStorage.setItem('meetbyvibe_user_state', loc.state); } catch {}
+      }
+      if (loc.city) {
+        setSelectedCity(loc.city);
+        try { localStorage.setItem('meetbyvibe_user_city', loc.city); } catch {}
+      }
       setLocationDetected(true);
     } catch (err) {
       console.warn('Could not auto-fetch location via Ola Maps:', err);
@@ -310,6 +356,8 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
       <PartnerNavbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        selectedLocality={selectedLocality}
+        formattedAddress={selectedAddress}
         selectedState={selectedState}
         selectedCity={selectedCity}
         isLocating={isLocating}
@@ -382,10 +430,17 @@ export const PartnerDashboard: React.FC<PartnerDashboardProps> = ({ onSwitchToAd
         isOpen={isLocationModalOpen}
         selectedState={selectedState}
         selectedCity={selectedCity}
+        selectedLocality={selectedLocality}
         onClose={() => setIsLocationModalOpen(false)}
-        onSelectLocation={(state, city) => {
+        onSelectLocation={(state, city, locality) => {
           setSelectedState(state);
           setSelectedCity(city);
+          if (locality) setSelectedLocality(locality);
+          try {
+            localStorage.setItem('meetbyvibe_user_state', state);
+            localStorage.setItem('meetbyvibe_user_city', city);
+            if (locality) localStorage.setItem('meetbyvibe_user_locality', locality);
+          } catch {}
         }}
       />
 

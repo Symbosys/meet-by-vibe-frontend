@@ -21,6 +21,8 @@ interface PartnerNavbarProps {
   onSearchChange: (val: string) => void;
   selectedState: string;
   selectedCity: string;
+  selectedLocality?: string;
+  formattedAddress?: string;
   onOpenLocationModal: () => void;
   onOpenNotifications?: () => void;
   onOpenMessages?: () => void;
@@ -36,6 +38,8 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
   onSearchChange,
   selectedState,
   selectedCity,
+  selectedLocality,
+  formattedAddress,
   onOpenLocationModal,
   onRegisterEvent,
   isLocating = false,
@@ -65,24 +69,33 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
     return matched ? matched.isoCode : '';
   }, [selectedState]);
 
-  // Formatted location display text (e.g. "Ranchi, Jharkhand")
+  // Formatted location display text (e.g. "Doranda, Ranchi" or "Ranchi, Jharkhand")
   const locationDisplayText = useMemo(() => {
+    if (selectedLocality && selectedCity) {
+      if (selectedLocality.toLowerCase() === selectedCity.toLowerCase()) {
+        return selectedState ? `${selectedCity}, ${selectedState}` : selectedCity;
+      }
+      return `${selectedLocality}, ${selectedCity}`;
+    }
     if (selectedCity && selectedState) {
       if (selectedCity.toLowerCase() === selectedState.toLowerCase()) {
         return selectedCity;
       }
       return `${selectedCity}, ${selectedState}`;
     }
-    return selectedCity || selectedState || 'Select Location';
-  }, [selectedCity, selectedState]);
+    return selectedLocality || selectedCity || selectedState || 'Select Location';
+  }, [selectedLocality, selectedCity, selectedState]);
 
-  // Short location for compact mobile top bar (e.g. "Ranchi, JH")
+  // Short location for compact mobile top bar (e.g. "Doranda, JH" or "Ranchi, JH")
   const shortLocationText = useMemo(() => {
+    if (selectedLocality) {
+      return stateIsoCode ? `${selectedLocality}, ${stateIsoCode}` : selectedLocality;
+    }
     if (selectedCity) {
       return stateIsoCode ? `${selectedCity}, ${stateIsoCode}` : selectedCity;
     }
     return selectedState || 'Location';
-  }, [selectedCity, selectedState, stateIsoCode]);
+  }, [selectedLocality, selectedCity, selectedState, stateIsoCode]);
 
   return (
     <header className="partner-navbar-wrap">
@@ -119,7 +132,7 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
               type="button"
               className={`partner-loc-pill mobile-center-loc ${locationDetected ? 'live-location' : ''}`}
               onClick={onOpenLocationModal}
-              title={isLocating ? 'Detecting location via Ola Maps...' : 'Tap to change city/state'}
+              title={formattedAddress ? `Live Location: ${formattedAddress}` : (isLocating ? 'Detecting location via Ola Maps...' : 'Tap to change city/state')}
             >
               {isLocating ? (
                 <Loader2 size={13} className="spin-animate" />
@@ -151,7 +164,7 @@ export const PartnerNavbar: React.FC<PartnerNavbarProps> = ({
             <button
               className={`partner-loc-pill ${locationDetected ? 'live-location' : ''}`}
               onClick={onOpenLocationModal}
-              title={isLocating ? 'Detecting current location via Ola Maps...' : 'Click to change location'}
+              title={formattedAddress ? `Live Location: ${formattedAddress}` : (isLocating ? 'Detecting current location via Ola Maps...' : 'Click to change location')}
             >
               {isLocating ? (
                 <Loader2 size={14} className="spin-animate" />

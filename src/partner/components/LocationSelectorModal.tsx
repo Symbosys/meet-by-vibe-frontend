@@ -6,19 +6,22 @@ interface LocationSelectorModalProps {
   isOpen: boolean;
   selectedState: string;
   selectedCity: string;
+  selectedLocality?: string;
   onClose: () => void;
-  onSelectLocation: (state: string, city: string) => void;
+  onSelectLocation: (state: string, city: string, locality?: string) => void;
 }
 
 export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
   isOpen,
   selectedState,
   selectedCity,
+  selectedLocality = '',
   onClose,
   onSelectLocation,
 }) => {
   const [activeStateName, setActiveStateName] = useState(selectedState);
   const [activeCityName, setActiveCityName] = useState(selectedCity);
+  const [activeLocalityName, setActiveLocalityName] = useState(selectedLocality);
   const [formattedAddress, setFormattedAddress] = useState('');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isDetecting, setIsDetecting] = useState(false);
@@ -29,9 +32,10 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
       const loc = await fetchCurrentLocationViaOlaMaps();
       if (loc.state) setActiveStateName(loc.state);
       if (loc.city) setActiveCityName(loc.city);
-      setFormattedAddress(loc.formattedAddress || `${loc.city}, ${loc.state}`);
+      if (loc.locality) setActiveLocalityName(loc.locality);
+      setFormattedAddress(loc.formattedAddress || `${loc.locality ? `${loc.locality}, ` : ''}${loc.city}, ${loc.state}`);
       setCoords({ lat: loc.latitude, lng: loc.longitude });
-      onSelectLocation(loc.state || selectedState, loc.city || selectedCity);
+      onSelectLocation(loc.state || selectedState, loc.city || selectedCity, loc.locality || selectedLocality);
     } catch (err) {
       console.warn('Location detection error:', err);
     } finally {
@@ -43,6 +47,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
     if (isOpen) {
       setActiveStateName(selectedState);
       setActiveCityName(selectedCity);
+      setActiveLocalityName(selectedLocality);
       handleFetchLiveLocation();
     }
   }, [isOpen]);
@@ -50,7 +55,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
   if (!isOpen) return null;
 
   const handleApply = () => {
-    onSelectLocation(activeStateName, activeCityName);
+    onSelectLocation(activeStateName, activeCityName, activeLocalityName);
     onClose();
   };
 
@@ -152,7 +157,7 @@ export const LocationSelectorModal: React.FC<LocationSelectorModalProps> = ({
               </div>
               <div>
                 <div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>
-                  {isDetecting ? 'Locating...' : activeCityName}
+                  {isDetecting ? 'Locating...' : (activeLocalityName && activeLocalityName.toLowerCase() !== activeCityName.toLowerCase() ? `${activeLocalityName}, ${activeCityName}` : activeCityName)}
                 </div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: '#e11d48', marginTop: '2px' }}>
                   {activeStateName || 'India'}
