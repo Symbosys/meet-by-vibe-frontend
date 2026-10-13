@@ -376,9 +376,21 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
     }
 
     try {
-      // Clean ISO timestamp strings
+      // Clean ISO timestamp strings handling overnight slots (crossing midnight)
+      const [startH, startM] = startTime.split(':').map(Number);
+      const [endH, endM] = endTime.split(':').map(Number);
+      const isOvernight = (endH * 60 + endM) <= (startH * 60 + startM);
+
+      let endDateStr = bookingDate;
+      if (isOvernight) {
+        const [y, m, d] = bookingDate.split('-').map(Number);
+        const nextDate = new Date(Date.UTC(y, m - 1, d));
+        nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+        endDateStr = nextDate.toISOString().split('T')[0];
+      }
+
       const startDateTime = `${bookingDate}T${startTime}:00.000Z`;
-      const endDateTime = `${bookingDate}T${endTime}:00.000Z`;
+      const endDateTime = `${endDateStr}T${endTime}:00.000Z`;
 
       // 1. Create booking in database with all details filled by user
       const response = await initiateBooking.mutateAsync({
@@ -437,8 +449,8 @@ export const BookPerformerModal: React.FC<BookPerformerModalProps> = ({
         performerId: partner.id,
         performerName: partner.name,
         bookingDate,
-        startTime: `${bookingDate}T${startTime}:00Z`,
-        endTime: `${bookingDate}T${endTime}:00Z`,
+        startTime: startDateTime,
+        endTime: endDateTime,
         durationHours,
         eventAddress,
         city,
